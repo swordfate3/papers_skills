@@ -31,6 +31,29 @@ npx skills add swordfate3/papers_skills --skill paper-research-workflow
 - 文件型论文知识库写入与校验
 - 从知识库检索相关论文并挖掘创新方向
 
+## 可视化工作流
+
+完整可视化说明见：[docs/论文研究技能可视化工作流.md](/home/fate/gitproject/papers_skills/docs/论文研究技能可视化工作流.md)
+
+```mermaid
+flowchart TD
+    A[输入论文 PDF] --> B{是否已配置工作区?}
+    B -->|否| C[选择长期论文库目录]
+    B -->|是| D[导入论文]
+    C --> D
+    D --> E{提取后端}
+    E -->|轻量提取| F[pdftotext 或 pypdf]
+    E -->|MinerU| G[custom or standard-cloud or local or agent-cloud]
+    F --> H[生成 extracted orlt paper-id]
+    G --> H
+    H --> I[自动分类与 PDF 归档]
+    I --> J[写入 knowledge/papers orlt paper-id.json]
+    J --> K[通俗解释]
+    J --> L[专家阅读]
+    J --> M[复现计划]
+    J --> N[知识库检索与创新挖掘]
+```
+
 ## 语言模式
 
 这个技能默认面向中文用户：对话、论文卡片、专家阅读、复现计划、创新简报和状态说明默认使用中文。论文标题、作者、方法名、模型名、数据集、指标、benchmark、命令和代码标识会尽量保留原文，避免翻译后失真。
