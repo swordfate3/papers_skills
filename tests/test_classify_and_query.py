@@ -18,6 +18,15 @@ def test_classify_systems_paper():
     assert "systems" in result["domains"]
 
 
+def test_classify_program_synthesis_paper():
+    result = classify_text(
+        "Playgol learns logic programs through inductive logic programming, program synthesis, "
+        "symbolic reasoning, and reusable background knowledge."
+    )
+    assert "software-engineering" in result["domains"]
+    assert "program-synthesis" in result["keywords"]
+
+
 def test_rank_related_papers_scores_shared_fields():
     target = {
         "paper_id": "target",
