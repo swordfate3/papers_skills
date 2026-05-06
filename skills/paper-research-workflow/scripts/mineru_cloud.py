@@ -105,12 +105,16 @@ def _json_request(
 def _put_file(url: str, path: Path, timeout: int = 300) -> None:
     data = path.read_bytes()
     request = urllib.request.Request(url, data=data, method="PUT")
-    request.add_header("Content-Type", "application/pdf")
     try:
         with _open_url(request, timeout=timeout) as response:
             response.read()
     except urllib.error.HTTPError as exc:  # pragma: no cover - network path
         detail = exc.read().decode("utf-8", errors="replace")
+        if "SignatureDoesNotMatch" in detail:
+            detail = (
+                "OSS presigned upload signature mismatch. The request was sent without extra Content-Type headers; "
+                f"server detail: {detail}"
+            )
         raise MinerUApiError(f"MinerU upload HTTP {exc.code}: {detail}") from exc
     except urllib.error.URLError as exc:  # pragma: no cover - network path
         raise MinerUApiError(f"MinerU upload failed: {exc}") from exc

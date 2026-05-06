@@ -34,6 +34,8 @@ python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backe
 
 Cloud MinerU requests ignore system proxy environment variables by default. Set `MINERU_USE_PROXY=1` only when the user explicitly wants MinerU requests to use their system proxy.
 
+For MinerU standard-cloud uploads, the bundled client sends the PDF to the OSS presigned URL without adding extra `Content-Type` headers. Do not add upload headers unless MinerU returns a presigned URL that explicitly requires them, otherwise OSS may return `SignatureDoesNotMatch`.
+
 For other machines, users can still provide a wrapper without editing this skill:
 
 ```bash

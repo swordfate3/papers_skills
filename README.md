@@ -160,6 +160,8 @@ python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --min
 MINERU_USE_PROXY=1 python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend agent-cloud
 ```
 
+高质量云 MinerU 上传到 OSS 预签名地址时，客户端默认不额外添加 `Content-Type` 请求头，避免签名头不一致导致 `SignatureDoesNotMatch`。
+
 如果用户已有自己的 MinerU wrapper：
 
 ```bash

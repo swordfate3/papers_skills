@@ -150,3 +150,32 @@ def test_cloud_requests_can_opt_into_system_proxy(monkeypatch):
     mineru_cloud._json_request("GET", "https://mineru.net/api/test")
 
     assert opened
+
+
+def test_presigned_upload_does_not_add_content_type_header(monkeypatch, tmp_path):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF")
+    captured = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return b""
+
+    def fake_open_url(request, timeout=300):
+        captured.append(request)
+        return FakeResponse()
+
+    monkeypatch.setattr(mineru_cloud, "_open_url", fake_open_url)
+
+    mineru_cloud._put_file("https://oss.example/paper.pdf?signature=abc", pdf)
+
+    assert captured
+    assert captured[0].get_method() == "PUT"
+    assert captured[0].get_header("Content-type") is None
+    assert captured[0].get_header("Content-Type") is None
