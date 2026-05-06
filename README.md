@@ -100,13 +100,43 @@ pdftotext -layout
 
 如果系统没有 `pdftotext`，脚本会尝试使用 Python 包 `pypdf`。
 
-复杂 PDF、扫描件、公式/表格较多的论文可以使用 MinerU。MinerU 引擎本身不打包在本仓库中，本仓库只提供 portable adapter。用户可以：
+复杂 PDF、扫描件、公式/表格较多的论文可以使用内置 MinerU 适配器。这个技能包不依赖别人本机已有的 MinerU skill，支持四种后端：
 
-- 将 `mineru` 安装到 `PATH`
-- 或提供自己的 MinerU wrapper：
+- `standard-cloud`：高质量云 MinerU，使用 https://mineru.net/apiManage/docs 的 v4 精准解析 API，需要 Token
+- `agent-cloud`：轻量云 MinerU，使用 Agent 轻量解析 API，适合无 Token 的零配置场景
+- `local`：调用本机 `mineru` 命令
+- `custom`：调用用户自定义 `MINERU_TO_MD` wrapper
+
+如果希望使用高质量云解析，第一次先配置 Token：
 
 ```bash
-MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /path/to/paper.pdf
+python scripts/paper_workflow.py configure-mineru --standard-token <your-mineru-token>
+```
+
+Token 会保存到技能目录下的 `.paper-mineru.json`，后续使用无需再次配置。查看配置状态：
+
+```bash
+python scripts/paper_workflow.py configure-mineru --show
+```
+
+使用高质量云 MinerU 读取论文：
+
+```bash
+python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend standard-cloud
+```
+
+也可以使用自动后端选择：
+
+```bash
+python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend auto
+```
+
+`auto` 会按顺序选择 `MINERU_TO_MD`、`MINERU_TOKEN` / 已保存 Token、本机 `mineru`、最后回退到 `agent-cloud`。
+
+如果用户已有自己的 MinerU wrapper：
+
+```bash
+MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru
 ```
 
 ## 输出说明

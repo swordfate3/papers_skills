@@ -1,21 +1,38 @@
-# Bundled MinerU Local Adapter
+# Bundled MinerU Adapter
 
 Use this reference when a local PDF needs OCR, formula/table preservation, or complex layout handling.
 
 The portable entry point in this suite is:
 
 ```bash
-scripts/mineru_to_md.sh <paper.pdf> --output <output-dir>
+scripts/mineru_to_md.sh <paper.pdf> --output <output-dir> --backend auto
 ```
 
-This adapter does not assume another agent skill is installed. It searches for a usable MinerU command in this order:
+This adapter does not assume another agent skill is installed. It supports:
 
-1. `MINERU_TO_MD` environment variable pointing to an executable wrapper.
-2. `mineru` command on `PATH`.
+- `standard-cloud`: high-quality MinerU v4 cloud parsing. Configure once with `python scripts/paper_workflow.py configure-mineru --standard-token <token>`.
+- `agent-cloud`: lightweight MinerU Agent cloud parsing without a saved token.
+- `local`: `mineru` command on `PATH`.
+- `custom`: `MINERU_TO_MD` environment variable pointing to an executable wrapper.
 
-If none is available, it exits with a clear error. The extraction workflow then writes `manifest.json` with `status: failed`.
+The recommended high-quality cloud flow is:
 
-For other machines, users can provide a wrapper without editing this skill:
+```bash
+python scripts/paper_workflow.py configure-mineru --standard-token <token>
+python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backend standard-cloud
+```
+
+Token configuration is saved in `.paper-mineru.json` inside this skill directory, so later runs do not need the token again.
+
+For automatic backend selection:
+
+```bash
+python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backend auto
+```
+
+`auto` prefers `MINERU_TO_MD`, then configured high-quality cloud token, then local `mineru`, then lightweight `agent-cloud`.
+
+For other machines, users can still provide a wrapper without editing this skill:
 
 ```bash
 MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/extract_pdf.py paper.pdf --output out --prefer-mineru

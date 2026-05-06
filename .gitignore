@@ -5,3 +5,4 @@ __pycache__/
 workspace/
 workspace-*/
 skills/paper-research-workflow/.paper-workspace.json
+skills/paper-research-workflow/.paper-mineru.json

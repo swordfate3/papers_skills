@@ -10,12 +10,14 @@ try:
     from shared.scripts.classify_paper import classify_text, infer_year
     from shared.scripts.extract_pdf import extract_pdf
     from shared.scripts.kb_query import load_memories, rank_related_papers
+    from shared.scripts.mineru_cloud import mineru_config_status, save_mineru_config
     from shared.scripts.paper_research_common import make_paper_id, read_json, write_json
     from shared.scripts.validate_memory import validate_memory
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
     from classify_paper import classify_text, infer_year
     from extract_pdf import extract_pdf
     from kb_query import load_memories, rank_related_papers
+    from mineru_cloud import mineru_config_status, save_mineru_config
     from paper_research_common import make_paper_id, read_json, write_json
     from validate_memory import validate_memory
 
@@ -126,13 +128,25 @@ def _archive_pdf(pdf_path: Path, workspace: Path, paper_id: str, classification:
     return archived
 
 
-def ingest_pdf(workspace: Path, pdf_path: Path, prefer_mineru: bool = False, no_mineru: bool = False) -> dict[str, Any]:
+def ingest_pdf(
+    workspace: Path,
+    pdf_path: Path,
+    prefer_mineru: bool = False,
+    no_mineru: bool = False,
+    mineru_backend: str = "auto",
+) -> dict[str, Any]:
     setup_workspace(workspace)
     if not pdf_path.exists():
         raise FileNotFoundError(pdf_path)
 
     scratch = workspace / "extracted/_incoming"
-    manifest = extract_pdf(pdf_path, scratch, prefer_mineru=prefer_mineru, no_mineru=no_mineru)
+    manifest = extract_pdf(
+        pdf_path,
+        scratch,
+        prefer_mineru=prefer_mineru,
+        no_mineru=no_mineru,
+        mineru_backend=mineru_backend,
+    )
     text_path = scratch / "text.md"
     text = text_path.read_text(encoding="utf-8", errors="replace") if text_path.exists() else ""
     year = infer_year(text)
@@ -200,6 +214,10 @@ def main() -> int:
     setup_parser.add_argument("--workspace", type=Path, required=True)
     setup_parser.add_argument("--save-default", action="store_true")
 
+    mineru_parser = subparsers.add_parser("configure-mineru")
+    mineru_parser.add_argument("--standard-token", default=None)
+    mineru_parser.add_argument("--show", action="store_true")
+
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("--workspace", type=Path, default=None)
 
@@ -216,6 +234,11 @@ def main() -> int:
     ingest_parser.add_argument("--workspace", type=Path, default=None)
     ingest_parser.add_argument("--prefer-mineru", action="store_true")
     ingest_parser.add_argument("--no-mineru", action="store_true")
+    ingest_parser.add_argument(
+        "--mineru-backend",
+        choices=["auto", "custom", "local", "standard-cloud", "agent-cloud"],
+        default="auto",
+    )
 
     args = parser.parse_args()
 
@@ -225,6 +248,11 @@ def main() -> int:
         if args.save_default:
             save_default_workspace(workspace)
         print(workspace)
+        return 0
+    if args.command == "configure-mineru":
+        if args.standard_token:
+            save_mineru_config(args.standard_token)
+        print(json.dumps(mineru_config_status(), ensure_ascii=False, indent=2))
         return 0
     if args.command == "status":
         print(json.dumps(load_state(resolve_workspace(args.workspace)), ensure_ascii=False, indent=2))
@@ -250,6 +278,7 @@ def main() -> int:
                     args.pdf,
                     prefer_mineru=args.prefer_mineru,
                     no_mineru=args.no_mineru,
+                    mineru_backend=args.mineru_backend,
                 ),
                 ensure_ascii=False,
                 indent=2,

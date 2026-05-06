@@ -32,6 +32,24 @@ python scripts/paper_workflow.py setup --workspace <chosen-dir> --save-default
 
 All later paper PDFs, extraction artifacts, Markdown analyses, reproduction plans, innovation briefs, and knowledge-base JSON files must use this saved workspace unless the user explicitly overrides it.
 
+## MinerU Cloud Rule
+
+This skill is self-contained and must not assume another MinerU skill exists. For high-quality cloud PDF parsing, ask the user for their MinerU token the first time, then run:
+
+```bash
+python scripts/paper_workflow.py configure-mineru --standard-token <token>
+```
+
+The token is saved in `.paper-mineru.json` inside this skill directory. Later high-quality runs should use the saved config and must not ask again unless parsing reports a missing or invalid token.
+
+Use high-quality cloud parsing with:
+
+```bash
+python scripts/paper_workflow.py ingest <pdf> --prefer-mineru --mineru-backend standard-cloud
+```
+
+If the user does not want to configure a token, use `--mineru-backend agent-cloud` for lightweight cloud parsing or let `--mineru-backend auto` choose the best available backend.
+
 ## Shared Contracts
 
 Use `scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.

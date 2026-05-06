@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import tempfile
@@ -9,8 +10,24 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from shared.scripts.mineru_cloud import (
+        MinerUApiError,
+        MinerUConfigError,
+        default_config_path as default_mineru_config_path,
+        load_mineru_config,
+        parse_with_agent_cloud,
+        parse_with_standard_cloud,
+    )
     from shared.scripts.paper_research_common import write_json
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from mineru_cloud import (
+        MinerUApiError,
+        MinerUConfigError,
+        default_config_path as default_mineru_config_path,
+        load_mineru_config,
+        parse_with_agent_cloud,
+        parse_with_standard_cloud,
+    )
     from paper_research_common import write_json
 
 
@@ -78,6 +95,22 @@ def default_mineru_wrapper() -> Path:
     return Path(__file__).resolve().with_name("mineru_to_md.sh")
 
 
+def resolve_mineru_backend(backend: str = "auto") -> str:
+    if backend not in {"auto", "custom", "local", "standard-cloud", "agent-cloud"}:
+        raise ValueError(f"Unsupported MinerU backend: {backend}")
+    if backend != "auto":
+        return backend
+    if os.environ.get("MINERU_TO_MD", "").strip():
+        return "custom"
+    if os.environ.get("MINERU_TOKEN", "").strip():
+        return "standard-cloud"
+    if load_mineru_config(default_mineru_config_path()).standard_token:
+        return "standard-cloud"
+    if shutil.which("mineru"):
+        return "local"
+    return "agent-cloud"
+
+
 def extract_lightweight(pdf_path: Path, output_dir: Path) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     text = ""
@@ -124,16 +157,46 @@ def extract_lightweight(pdf_path: Path, output_dir: Path) -> dict[str, Any]:
     return manifest
 
 
-def _run_mineru(pdf_path: Path, output_dir: Path, mineru_wrapper: str) -> dict[str, Any]:
+def _failed_mineru_manifest(output_dir: Path, reason: str, backend: str) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "status": "failed",
+        "strategy": "mineru",
+        "backend": backend,
+        "reason": reason,
+    }
+    write_json(output_dir / "manifest.json", manifest)
+    return manifest
+
+
+def _run_mineru(pdf_path: Path, output_dir: Path, mineru_wrapper: str, backend: str = "auto") -> dict[str, Any]:
+    resolved_backend = resolve_mineru_backend(backend)
+    if resolved_backend == "standard-cloud":
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                mineru_out = Path(tmp) / "mineru"
+                parse_with_standard_cloud(pdf_path.resolve(), mineru_out)
+                manifest = normalize_mineru_outputs(mineru_out, output_dir)
+                manifest["backend"] = "standard-cloud"
+                write_json(output_dir / "manifest.json", manifest)
+                return manifest
+        except (MinerUApiError, MinerUConfigError) as exc:
+            return _failed_mineru_manifest(output_dir, str(exc), "standard-cloud")
+    if resolved_backend == "agent-cloud":
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                mineru_out = Path(tmp) / "mineru"
+                parse_with_agent_cloud(pdf_path.resolve(), mineru_out)
+                manifest = normalize_mineru_outputs(mineru_out, output_dir)
+                manifest["backend"] = "agent-cloud"
+                write_json(output_dir / "manifest.json", manifest)
+                return manifest
+        except MinerUApiError as exc:
+            return _failed_mineru_manifest(output_dir, str(exc), "agent-cloud")
+
     wrapper = Path(mineru_wrapper)
     if not wrapper.exists():
-        manifest = {
-            "status": "failed",
-            "strategy": "mineru",
-            "reason": f"MinerU wrapper not found: {wrapper}",
-        }
-        write_json(output_dir / "manifest.json", manifest)
-        return manifest
+        return _failed_mineru_manifest(output_dir, f"MinerU wrapper not found: {wrapper}", resolved_backend)
 
     with tempfile.TemporaryDirectory() as tmp:
         mineru_out = Path(tmp) / "mineru"
@@ -144,14 +207,15 @@ def _run_mineru(pdf_path: Path, output_dir: Path, mineru_wrapper: str) -> dict[s
             text=True,
         )
         if result.returncode != 0:
-            manifest = {
-                "status": "failed",
-                "strategy": "mineru",
-                "reason": result.stderr.strip() or result.stdout.strip() or "MinerU wrapper failed",
-            }
-            write_json(output_dir / "manifest.json", manifest)
-            return manifest
-        return normalize_mineru_outputs(mineru_out, output_dir)
+            return _failed_mineru_manifest(
+                output_dir,
+                result.stderr.strip() or result.stdout.strip() or "MinerU wrapper failed",
+                resolved_backend,
+            )
+        manifest = normalize_mineru_outputs(mineru_out, output_dir)
+        manifest["backend"] = resolved_backend
+        write_json(output_dir / "manifest.json", manifest)
+        return manifest
 
 
 def extract_pdf(
@@ -160,11 +224,17 @@ def extract_pdf(
     prefer_mineru: bool = False,
     no_mineru: bool = False,
     mineru_wrapper: str | None = None,
+    mineru_backend: str = "auto",
 ) -> dict[str, Any]:
     if prefer_mineru:
         if no_mineru:
             raise ValueError("prefer_mineru and no_mineru cannot both be true")
-        return _run_mineru(pdf_path, output_dir, str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()))
+        return _run_mineru(
+            pdf_path,
+            output_dir,
+            str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()),
+            backend=mineru_backend,
+        )
 
     manifest = extract_lightweight(pdf_path, output_dir)
     if no_mineru or manifest.get("status") != "ok":
@@ -174,7 +244,12 @@ def extract_pdf(
     strategy = choose_extraction_strategy(ExtractionMetrics(**metrics))
     if strategy == "lightweight":
         return manifest
-    return _run_mineru(pdf_path, output_dir, str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()))
+    return _run_mineru(
+        pdf_path,
+        output_dir,
+        str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()),
+        backend=mineru_backend,
+    )
 
 
 def main() -> int:
@@ -187,6 +262,11 @@ def main() -> int:
         "--mineru-wrapper",
         default=None,
     )
+    parser.add_argument(
+        "--mineru-backend",
+        choices=["auto", "custom", "local", "standard-cloud", "agent-cloud"],
+        default="auto",
+    )
     args = parser.parse_args()
 
     manifest = extract_pdf(
@@ -195,6 +275,7 @@ def main() -> int:
         prefer_mineru=args.prefer_mineru,
         no_mineru=args.no_mineru,
         mineru_wrapper=args.mineru_wrapper,
+        mineru_backend=args.mineru_backend,
     )
     print(manifest.get("status", "unknown"))
     return 0 if manifest.get("status") == "ok" else 1

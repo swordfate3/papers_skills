@@ -14,6 +14,7 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "agents/openai.yaml",
         "scripts/paper_workflow.py",
         "scripts/extract_pdf.py",
+        "scripts/mineru_cloud.py",
         "scripts/mineru_to_md.sh",
         "schemas/paper-memory.schema.json",
         "templates/paper-memory.json",
@@ -49,6 +50,38 @@ def test_single_skill_install_smoke_test(tmp_path):
     )
     assert status.returncode == 0, status.stderr
     assert '"papers": {}' in status.stdout
+
+
+def test_single_skill_mineru_config_smoke_test(tmp_path):
+    installed = tmp_path / "paper-research-workflow"
+    shutil.copytree(SKILL_DIR, installed)
+
+    configure = subprocess.run(
+        [
+            sys.executable,
+            "scripts/paper_workflow.py",
+            "configure-mineru",
+            "--standard-token",
+            "test-token",
+        ],
+        cwd=installed,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert configure.returncode == 0, configure.stderr
+    assert (installed / ".paper-mineru.json").is_file()
+
+    show = subprocess.run(
+        [sys.executable, "scripts/paper_workflow.py", "configure-mineru", "--show"],
+        cwd=installed,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert show.returncode == 0, show.stderr
+    assert '"standard_token_configured": true' in show.stdout
+    assert "test-token" not in show.stdout
 
 
 def test_single_skill_default_workspace_smoke_test(tmp_path):

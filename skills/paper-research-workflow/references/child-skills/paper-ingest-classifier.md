@@ -18,10 +18,17 @@ Use the bundled reference `references/pdf-processing.md` for normal text-based P
 Use the bundled reference `references/mineru-local.md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. The portable MinerU adapter is:
 
 ```bash
-scripts/mineru_to_md.sh <pdf> --output <dir>
+scripts/mineru_to_md.sh <pdf> --output <dir> --backend auto
 ```
 
-If a user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wrapper`. Online MinerU APIs are not used by default.
+For high-quality cloud parsing, ask the user for their MinerU token the first time and save it:
+
+```bash
+python scripts/paper_workflow.py configure-mineru --standard-token <token>
+python scripts/paper_workflow.py ingest <pdf> --prefer-mineru --mineru-backend standard-cloud
+```
+
+After that, the saved `.paper-mineru.json` config allows later high-quality MinerU runs without asking again. If the user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wrapper`.
 
 The shared implementation entry is:
 
