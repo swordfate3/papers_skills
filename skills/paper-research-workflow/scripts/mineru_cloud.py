@@ -156,6 +156,14 @@ def _first_value(data: dict[str, Any], keys: list[str]) -> Any:
     return None
 
 
+def _upload_url_from_item(item: Any) -> str:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        return str(_first_value(item, ["upload_url", "url", "file_url"]) or "")
+    return ""
+
+
 def _poll_task(task_url: str, token: str | None, timeout_seconds: int, poll_interval: int) -> dict[str, Any]:
     deadline = time.monotonic() + timeout_seconds
     last: dict[str, Any] = {}
@@ -212,9 +220,10 @@ def parse_with_standard_cloud(
         "POST",
         f"{api_base}/api/v4/file-urls/batch",
         {
-            "files": [{"name": pdf_path.name}],
+            "files": [{"name": pdf_path.name, "data_id": pdf_path.stem}],
             "enable_formula": True,
             "enable_table": True,
+            "model_version": "vlm",
             "language": "auto",
         },
         token=resolved_token,
@@ -225,7 +234,7 @@ def parse_with_standard_cloud(
     if not upload_items:
         raise MinerUApiError(f"MinerU upload URL response missing files: {upload_info}")
     first = upload_items[0] if isinstance(upload_items, list) else next(iter(upload_items.values()))
-    upload_url = _first_value(first, ["upload_url", "url", "file_url"]) if isinstance(first, dict) else str(first)
+    upload_url = _upload_url_from_item(first)
     if not upload_url:
         raise MinerUApiError(f"MinerU upload URL missing: {upload_info}")
     if not batch_id:

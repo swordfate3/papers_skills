@@ -161,6 +161,7 @@ MINERU_USE_PROXY=1 python scripts/paper_workflow.py ingest /path/to/paper.pdf --
 ```
 
 高质量云 MinerU 上传到 OSS 预签名地址时，客户端默认不额外添加 `Content-Type` 请求头，避免签名头不一致导致 `SignatureDoesNotMatch`。
+标准云解析默认使用 `model_version: vlm`，并为上传文件传入稳定的 `data_id`，便于 MinerU 批量任务结果追踪。
 
 如果用户已有自己的 MinerU wrapper：
 

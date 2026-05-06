@@ -89,9 +89,44 @@ def test_standard_cloud_uses_batch_upload_flow(monkeypatch, tmp_path):
     mineru_cloud.parse_with_standard_cloud(pdf, output, token="token", poll_interval=0)
 
     assert calls[0][1].endswith("/api/v4/file-urls/batch")
-    assert calls[0][2]["files"] == [{"name": "paper.pdf"}]
+    assert calls[0][2]["files"] == [{"name": "paper.pdf", "data_id": "paper"}]
+    assert calls[0][2]["model_version"] == "vlm"
     assert any(call[1].endswith("/api/v4/extract-results/batch/batch-1") for call in calls)
     assert not any("/api/v4/extract/task" in call[1] for call in calls if isinstance(call[1], str))
+
+
+def test_standard_cloud_accepts_string_upload_urls(monkeypatch, tmp_path):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF")
+    output = tmp_path / "mineru-out"
+    calls = []
+
+    def fake_json_request(method, url, payload=None, token=None, timeout=60):
+        calls.append((method, url, payload, token))
+        if url.endswith("/api/v4/file-urls/batch"):
+            return {
+                "data": {
+                    "batch_id": "batch-1",
+                    "file_urls": ["https://upload.example/paper.pdf"],
+                }
+            }
+        if url.endswith("/api/v4/extract-results/batch/batch-1"):
+            return {
+                "data": {
+                    "batch_id": "batch-1",
+                    "extract_result": [{"state": "done", "full_zip_url": "https://download.example/result.zip"}],
+                }
+            }
+        raise AssertionError(f"unexpected API call: {method} {url}")
+
+    monkeypatch.setattr(mineru_cloud, "_json_request", fake_json_request)
+    monkeypatch.setattr(mineru_cloud, "_put_file", lambda url, path: calls.append(("PUT", url, path.name, None)))
+    monkeypatch.setattr(mineru_cloud, "_download", lambda url, path: calls.append(("DOWNLOAD", url, path.name, None)))
+    monkeypatch.setattr(mineru_cloud, "_extract_zip", lambda zip_path, output_dir: calls.append(("UNZIP", str(zip_path), str(output_dir), None)))
+
+    mineru_cloud.parse_with_standard_cloud(pdf, output, token="token", poll_interval=0)
+
+    assert ("PUT", "https://upload.example/paper.pdf", "paper.pdf", None) in calls
 
 
 def test_cloud_requests_ignore_system_proxy_by_default(monkeypatch):

@@ -36,6 +36,8 @@ Cloud MinerU requests ignore system proxy environment variables by default. Set 
 
 For MinerU standard-cloud uploads, the bundled client sends the PDF to the OSS presigned URL without adding extra `Content-Type` headers. Do not add upload headers unless MinerU returns a presigned URL that explicitly requires them, otherwise OSS may return `SignatureDoesNotMatch`.
 
+The standard-cloud request uses `model_version: vlm` and includes a stable `data_id` derived from the local file stem so batch results can be matched back to the source paper.
+
 For other machines, users can still provide a wrapper without editing this skill:
 
 ```bash
