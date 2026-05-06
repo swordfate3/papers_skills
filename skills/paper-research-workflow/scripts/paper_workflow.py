@@ -236,7 +236,7 @@ def main() -> int:
     ingest_parser.add_argument("--no-mineru", action="store_true")
     ingest_parser.add_argument(
         "--mineru-backend",
-        choices=["auto", "custom", "local", "standard-cloud", "agent-cloud"],
+        choices=["auto", "local", "standard-cloud", "agent-cloud"],
         default="auto",
     )
 

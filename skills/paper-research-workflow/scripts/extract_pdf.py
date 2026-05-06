@@ -96,12 +96,10 @@ def default_mineru_wrapper() -> Path:
 
 
 def resolve_mineru_backend(backend: str = "auto") -> str:
-    if backend not in {"auto", "custom", "local", "standard-cloud", "agent-cloud"}:
+    if backend not in {"auto", "local", "standard-cloud", "agent-cloud"}:
         raise ValueError(f"Unsupported MinerU backend: {backend}")
     if backend != "auto":
         return backend
-    if os.environ.get("MINERU_TO_MD", "").strip():
-        return "custom"
     if os.environ.get("MINERU_TOKEN", "").strip():
         return "standard-cloud"
     if load_mineru_config(default_mineru_config_path()).standard_token:
@@ -264,7 +262,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--mineru-backend",
-        choices=["auto", "custom", "local", "standard-cloud", "agent-cloud"],
+        choices=["auto", "local", "standard-cloud", "agent-cloud"],
         default="auto",
     )
     args = parser.parse_args()

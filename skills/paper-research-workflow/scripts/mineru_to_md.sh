@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 3 ]]; then
-  echo "usage: mineru_to_md.sh <input.pdf> --output <output-dir> [--backend auto|custom|local|standard-cloud|agent-cloud]" >&2
+  echo "usage: mineru_to_md.sh <input.pdf> --output <output-dir> [--backend auto|local|standard-cloud|agent-cloud]" >&2
   exit 2
 fi
 
@@ -31,14 +31,6 @@ if [[ -z "$input" || -z "$output" ]]; then
   exit 2
 fi
 
-if [[ "$backend" == "custom" || ( "$backend" == "auto" && -n "${MINERU_TO_MD:-}" ) ]]; then
-  if [[ -z "${MINERU_TO_MD:-}" ]]; then
-    echo "MINERU_TO_MD is required for custom MinerU backend." >&2
-    exit 127
-  fi
-  exec "${MINERU_TO_MD}" "$@"
-fi
-
 if [[ "$backend" == "standard-cloud" || "$backend" == "agent-cloud" || ( "$backend" == "auto" && -n "${MINERU_TOKEN:-}" ) ]]; then
   exec python "$(dirname "$0")/mineru_cloud_cli.py" "$input" --output "$output" --backend "$backend"
 fi
@@ -53,5 +45,5 @@ if [[ "$backend" == "auto" ]]; then
   exec python "$(dirname "$0")/mineru_cloud_cli.py" "$input" --output "$output" --backend agent-cloud
 fi
 
-echo "No MinerU backend found. Configure MINERU_TOKEN, set MINERU_TO_MD, use --backend agent-cloud, or install mineru on PATH." >&2
+echo "No MinerU backend found. Configure MINERU_TOKEN, use --backend agent-cloud, or install mineru on PATH." >&2
 exit 127

@@ -28,7 +28,7 @@ python scripts/paper_workflow.py configure-mineru --standard-token <token>
 python scripts/paper_workflow.py ingest <pdf> --prefer-mineru --mineru-backend standard-cloud
 ```
 
-After that, the saved `.paper-mineru.json` config allows later high-quality MinerU runs without asking again. If the user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wrapper`.
+After that, the saved `.paper-mineru.json` config allows later high-quality MinerU runs without asking again.
 
 The shared implementation entry is:
 

@@ -81,6 +81,18 @@ def test_output_workflows_follow_selected_language():
         assert "default Chinese" in text
 
 
+def test_skill_docs_no_longer_depend_on_custom_mineru_wrapper():
+    for relative in [
+        "README.md",
+        "skills/paper-research-workflow/SKILL.md",
+        "skills/paper-research-workflow/references/mineru-local.md",
+        "skills/paper-research-workflow/references/child-skills/paper-ingest-classifier.md",
+    ]:
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "MINERU_TO_MD" not in text
+        assert "custom" not in text or "custom or" not in text
+
+
 def test_reading_workflows_support_iterative_refinement():
     for relative in [
         "references/child-skills/paper-plain-explainer.md",

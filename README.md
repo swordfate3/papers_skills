@@ -43,7 +43,7 @@ flowchart TD
     C --> D
     D --> E{提取后端}
     E -->|轻量提取| F[pdftotext 或 pypdf]
-    E -->|MinerU| G[custom or standard-cloud or local or agent-cloud]
+    E -->|MinerU| G[standard-cloud or local or agent-cloud]
     F --> H[生成 extracted orlt paper-id]
     G --> H
     H --> I[自动分类与 PDF 归档]
@@ -52,6 +52,13 @@ flowchart TD
     J --> L[专家阅读]
     J --> M[复现计划]
     J --> N[知识库检索与创新挖掘]
+    K --> K1{不满意?}
+    L --> L1{不满意?}
+    M --> M1{不满意?}
+    K1 -->|继续优化| K2[refine 并选择覆盖或新版本]
+    L1 -->|继续优化| L2[refine 并选择覆盖或新版本]
+    M1 -->|继续优化| M2[refine 并选择覆盖或新版本]
+    N --> N1[创新候选 score 排名并 append 入库]
 ```
 
 ## 语言模式
@@ -144,12 +151,11 @@ pdftotext -layout
 
 如果系统没有 `pdftotext`，脚本会尝试使用 Python 包 `pypdf`。
 
-复杂 PDF、扫描件、公式/表格较多的论文可以使用内置 MinerU 适配器。这个技能包不依赖别人本机已有的 MinerU skill，支持四种后端：
+复杂 PDF、扫描件、公式/表格较多的论文可以使用内置 MinerU 适配器。这个技能包不依赖别人本机已有的 MinerU skill，支持三种内置后端：
 
 - `standard-cloud`：高质量云 MinerU，使用 https://mineru.net/apiManage/docs 的 v4 精准解析 API，需要 Token
 - `agent-cloud`：轻量云 MinerU，使用 Agent 轻量解析 API，适合无 Token 的零配置场景
 - `local`：调用本机 `mineru` 命令
-- `custom`：调用用户自定义 `MINERU_TO_MD` wrapper
 
 如果希望使用高质量云解析，第一次先配置 Token：
 
@@ -175,7 +181,7 @@ python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --min
 python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend auto
 ```
 
-`auto` 会按顺序选择 `MINERU_TO_MD`、`MINERU_TOKEN` / 已保存 Token、本机 `mineru`、最后回退到 `agent-cloud`。
+`auto` 会按顺序选择 `MINERU_TOKEN` / 已保存 Token、本机 `mineru`、最后回退到 `agent-cloud`。
 
 云 MinerU 默认不使用系统代理环境变量，避免错误代理导致 `mineru.net` 解析或连接失败。如果确实需要代理，显式设置：
 
@@ -185,12 +191,6 @@ MINERU_USE_PROXY=1 python scripts/paper_workflow.py ingest /path/to/paper.pdf --
 
 高质量云 MinerU 上传到 OSS 预签名地址时，客户端默认不额外添加 `Content-Type` 请求头，避免签名头不一致导致 `SignatureDoesNotMatch`。
 标准云解析默认使用 `model_version: vlm`，并为上传文件传入稳定的 `data_id`，便于 MinerU 批量任务结果追踪。
-
-如果用户已有自己的 MinerU wrapper：
-
-```bash
-MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru
-```
 
 ## 输出说明
 

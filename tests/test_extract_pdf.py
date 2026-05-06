@@ -39,15 +39,6 @@ def test_normalize_mineru_outputs_picks_markdown_file(tmp_path):
     assert manifest["strategy"] == "mineru"
 
 
-def test_auto_backend_prefers_custom_wrapper(monkeypatch, tmp_path):
-    wrapper = tmp_path / "mineru-wrapper.sh"
-    wrapper.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    monkeypatch.setenv("MINERU_TO_MD", str(wrapper))
-    monkeypatch.setenv("MINERU_TOKEN", "token")
-
-    assert resolve_mineru_backend("auto") == "custom"
-
-
 def test_auto_backend_uses_standard_cloud_when_token_exists(monkeypatch):
     monkeypatch.delenv("MINERU_TO_MD", raising=False)
     monkeypatch.setenv("MINERU_TOKEN", "token")
@@ -73,3 +64,14 @@ def test_explicit_standard_cloud_backend_is_preserved(monkeypatch):
     monkeypatch.delenv("MINERU_TOKEN", raising=False)
 
     assert resolve_mineru_backend("standard-cloud") == "standard-cloud"
+
+
+def test_auto_backend_prefers_local_before_agent_cloud(monkeypatch):
+    import extract_pdf
+
+    monkeypatch.delenv("MINERU_TO_MD", raising=False)
+    monkeypatch.delenv("MINERU_TOKEN", raising=False)
+    monkeypatch.setattr(extract_pdf, "load_mineru_config", lambda path: type("Cfg", (), {"standard_token": ""})())
+    monkeypatch.setattr(extract_pdf.shutil, "which", lambda name: "/usr/bin/mineru" if name == "mineru" else None)
+
+    assert resolve_mineru_backend("auto") == "local"
