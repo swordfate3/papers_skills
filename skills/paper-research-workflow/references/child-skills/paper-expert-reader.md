@@ -44,6 +44,8 @@ Update `workspace/knowledge/papers/<paper-id>.json`:
 
 ## Reading Standard
 
+Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the expert reading in English while keeping recognizable paper terms in their original language. If the user switches back to Chinese mode, resume Chinese output.
+
 Distinguish paper claims from your own inference. Evaluate whether experiments actually support the claims, whether baselines are strong, whether ablations isolate the proposed mechanism, and what would likely fail outside the paper's setting.
 
 For CS/AI/ML/systems/security papers, pay special attention to datasets, metrics, compute, implementation assumptions, missing comparisons, and reproducibility signals.

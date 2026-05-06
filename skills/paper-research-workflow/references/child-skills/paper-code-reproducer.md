@@ -41,6 +41,8 @@ Produce a reproduction plan, not a full implementation, unless the user explicit
 
 ## Reproduction Analysis
 
+Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the reproduction plan in English while keeping commands, package names, code identifiers, datasets, metrics, and benchmark names unchanged. If the user switches back to Chinese mode, resume Chinese output.
+
 Identify required datasets, checkpoints, hardware, environment, dependencies, metrics, baselines, ablations, expected sanity checks, and likely blockers. Mark uncertain items as blocking unknowns instead of guessing.
 
 ## Shared Contracts

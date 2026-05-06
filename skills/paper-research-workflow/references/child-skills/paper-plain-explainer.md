@@ -35,6 +35,8 @@ Update `workspace/knowledge/papers/<paper-id>.json`:
 
 ## Style
 
+Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the paper card in English while keeping recognizable paper terms in their original language. If the user switches back to Chinese mode, resume Chinese output.
+
 Explain the paper as if teaching a capable engineer who is new to the specific topic. Preserve paper titles, model names, dataset names, metrics, and method names in English when translation would reduce recognizability.
 
 Separate paper claims from your explanation. Use phrases such as "论文声称" for claims and "直观理解是" for interpretation.

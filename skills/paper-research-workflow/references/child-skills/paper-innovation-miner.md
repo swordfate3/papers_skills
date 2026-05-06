@@ -37,6 +37,8 @@ Update `workspace/knowledge/papers/<paper-id>.json` when a target paper gains du
 
 ## Innovation Brief Standard
 
+Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the innovation brief in English while keeping paper titles, method names, datasets, metrics, and benchmark names recognizable. If the user switches back to Chinese mode, resume Chinese output.
+
 Include source papers, shared problem or tension, complementary mechanisms, concrete hypothesis, why it might work, minimum experiment, risks, and falsification conditions.
 
 Do not claim verified novelty. State that the output is an ideation artifact and still needs literature search.

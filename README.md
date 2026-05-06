@@ -31,6 +31,27 @@ npx skills add swordfate3/papers_skills --skill paper-research-workflow
 - 文件型论文知识库写入与校验
 - 从知识库检索相关论文并挖掘创新方向
 
+## 语言模式
+
+这个技能默认面向中文用户：对话、论文卡片、专家阅读、复现计划、创新简报和状态说明默认使用中文。论文标题、作者、方法名、模型名、数据集、指标、benchmark、命令和代码标识会尽量保留原文，避免翻译后失真。
+
+也支持热切换：
+
+```text
+切换英文
+English mode
+切换中文
+Chinese mode
+```
+
+示例：
+
+```text
+使用 paper-research-workflow，用 MinerU 读取并解释这篇论文：/path/to/paper.pdf
+切换英文，继续生成 reproduction plan
+切换中文，基于知识库挖掘新的创新点
+```
+
 ## 目录结构
 
 安装单元是一个完整技能目录：

@@ -20,6 +20,19 @@ Route natural user requests to the six internal child workflows:
 
 Use this skill when the user asks to "read this paper", process a local PDF, update the paper knowledge base, prepare a reproduction plan, or find innovation ideas from stored papers.
 
+## Language Rule
+
+Default to Chinese for all user-facing conversation, prompts, Markdown reports, explanations, expert readings, reproduction plans, innovation briefs, and status summaries. Keep paper titles, author names, method names, model names, datasets, metrics, benchmark names, code identifiers, equations, and quoted technical terms in their original language when translation would reduce recognizability.
+
+Support hot language switching inside the same paper workspace:
+
+- When the user says `切换英文`, `英文模式`, `English mode`, or asks to answer in English, switch subsequent user-facing outputs to English.
+- When the user says `切换中文`, `中文模式`, `Chinese mode`, or asks to answer in Chinese, switch subsequent user-facing outputs back to Chinese.
+- If the user's current message is mostly English, answer in English for that request unless a saved or explicit Chinese preference is active.
+- If the user's current message is mostly Chinese, answer in Chinese for that request and keep Chinese as the default.
+
+The language setting affects generated Markdown artifacts, but does not change machine-readable JSON field names or schema values unless a schema field explicitly stores natural-language prose.
+
 ## First-Run Rule
 
 Before processing the first paper, check whether `.paper-workspace.json` exists in this skill directory. If it does not exist, ask the user where to create the long-term paper workspace. Do not silently create `workspace/` by default.

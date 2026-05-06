@@ -58,3 +58,24 @@ def test_child_workflow_references_are_bundled():
     ]
     for name in expected:
         assert (ROOT / "skills/paper-research-workflow/references/child-skills" / f"{name}.md").is_file()
+
+
+def test_workflow_skill_defaults_to_chinese_with_hot_language_switch():
+    text = read_skill("paper-research-workflow")
+    assert "Default to Chinese" in text
+    assert "切换英文" in text
+    assert "English mode" in text
+    assert "切换中文" in text
+    assert "Chinese mode" in text
+
+
+def test_output_workflows_follow_selected_language():
+    for relative in [
+        "references/child-skills/paper-plain-explainer.md",
+        "references/child-skills/paper-expert-reader.md",
+        "references/child-skills/paper-code-reproducer.md",
+        "references/child-skills/paper-innovation-miner.md",
+    ]:
+        text = (ROOT / "skills/paper-research-workflow" / relative).read_text(encoding="utf-8")
+        assert "selected language" in text
+        assert "default Chinese" in text
