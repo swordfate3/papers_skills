@@ -7,22 +7,24 @@ description: Use when the user asks to read, process, classify, explain, reprodu
 
 ## Role
 
-Act as the orchestrator for the paper research skill suite. Route natural user requests to the six child skills:
+Act as the complete installable paper research skill suite. This single skill is the recommended `npx skills add` target and includes the scripts, schemas, templates, and references needed to run without installing the six child workflows separately.
 
-- `paper-ingest-classifier`
-- `paper-plain-explainer`
-- `paper-expert-reader`
-- `paper-code-reproducer`
-- `paper-knowledge-base`
-- `paper-innovation-miner`
+Route natural user requests to the six internal child workflows:
+
+- `references/child-skills/paper-ingest-classifier.md`
+- `references/child-skills/paper-plain-explainer.md`
+- `references/child-skills/paper-expert-reader.md`
+- `references/child-skills/paper-code-reproducer.md`
+- `references/child-skills/paper-knowledge-base.md`
+- `references/child-skills/paper-innovation-miner.md`
 
 Use this skill when the user asks to "read this paper", process a local PDF, update the paper knowledge base, prepare a reproduction plan, or find innovation ideas from stored papers.
 
 ## Shared Contracts
 
-Use `shared/scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.
+Use `scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.
 
-Use `shared/templates` for output shape. Every paper should maintain canonical memory at:
+Use `templates/` for output shape. Use `schemas/` for validation. Use `references/` for PDF extraction, MinerU, and child workflow guidance. Every paper should maintain canonical memory at:
 
 ```text
 workspace/knowledge/papers/<paper-id>.json
@@ -44,13 +46,13 @@ workspace/state/papers.json
 
 For a full paper read:
 
-1. Run or instruct setup with `python shared/scripts/paper_workflow.py setup --workspace workspace`.
-2. Use `paper-ingest-classifier` to extract, classify, archive, and create initial memory.
-3. Use `paper-plain-explainer` to create the plain-language card.
-4. Use `paper-expert-reader` to create the expert reading and innovation seeds.
-5. Use `paper-code-reproducer` to create the reproduction plan.
-6. Use `paper-knowledge-base` to update and validate memory.
-7. Use `paper-innovation-miner` only when the user asks for related papers or innovation directions.
+1. Run or instruct setup with `python scripts/paper_workflow.py setup --workspace workspace`.
+2. Read `references/child-skills/paper-ingest-classifier.md` to extract, classify, archive, and create initial memory.
+3. Read `references/child-skills/paper-plain-explainer.md` to create the plain-language card.
+4. Read `references/child-skills/paper-expert-reader.md` to create the expert reading and innovation seeds.
+5. Read `references/child-skills/paper-code-reproducer.md` to create the reproduction plan.
+6. Read `references/child-skills/paper-knowledge-base.md` to update and validate memory.
+7. Read `references/child-skills/paper-innovation-miner.md` only when the user asks for related papers or innovation directions.
 
 For partial requests, call only the matching child skill and keep `workspace/knowledge/papers/<paper-id>.json` updated.
 

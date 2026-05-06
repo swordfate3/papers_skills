@@ -19,27 +19,42 @@ def test_workflow_skill_mentions_all_child_skills_and_shared_cli():
         "paper-innovation-miner",
     ]:
         assert name in text
-    assert "shared/scripts/paper_workflow.py" in text
+    assert "scripts/paper_workflow.py" in text
+    assert "shared/scripts/paper_workflow.py" not in text
 
 
 def test_ingest_skill_uses_bundled_pdf_references_not_external_skills():
-    text = read_skill("paper-ingest-classifier")
+    text = (ROOT / "skills/paper-research-workflow/references/child-skills/paper-ingest-classifier.md").read_text(
+        encoding="utf-8"
+    )
     assert ".agents/skills/" not in text
-    assert "shared/references/pdf-processing.md" in text
-    assert "shared/references/mineru-local.md" in text
+    assert "references/pdf-processing.md" in text
+    assert "references/mineru-local.md" in text
     assert "workspace/extracted/<paper-id>/" in text
 
 
 def test_each_skill_mentions_shared_contracts():
-    for name in [
-        "paper-research-workflow",
+    for relative in [
+        "SKILL.md",
+        "references/child-skills/paper-ingest-classifier.md",
+        "references/child-skills/paper-plain-explainer.md",
+        "references/child-skills/paper-expert-reader.md",
+        "references/child-skills/paper-code-reproducer.md",
+        "references/child-skills/paper-knowledge-base.md",
+        "references/child-skills/paper-innovation-miner.md",
+    ]:
+        text = (ROOT / "skills/paper-research-workflow" / relative).read_text(encoding="utf-8")
+        assert "workspace/knowledge/papers/<paper-id>.json" in text
+
+
+def test_child_workflow_references_are_bundled():
+    expected = [
         "paper-ingest-classifier",
         "paper-plain-explainer",
         "paper-expert-reader",
         "paper-code-reproducer",
         "paper-knowledge-base",
         "paper-innovation-miner",
-    ]:
-        text = read_skill(name)
-        assert "shared/templates" in text
-        assert "workspace/knowledge/papers/<paper-id>.json" in text
+    ]
+    for name in expected:
+        assert (ROOT / "skills/paper-research-workflow/references/child-skills" / f"{name}.md").is_file()

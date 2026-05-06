@@ -13,12 +13,12 @@ Accept a local PDF path or a PDF placed under `workspace/inbox/`. Version 1 does
 
 This skill must be portable. Do not assume other agent skills are installed on the user's machine.
 
-Use the bundled reference `shared/references/pdf-processing.md` for normal text-based PDFs. The implementation entry is `shared/scripts/extract_pdf.py`, which tries `pdftotext -layout` and then `pypdf` when available.
+Use the bundled reference `references/pdf-processing.md` for normal text-based PDFs. The implementation entry is `scripts/extract_pdf.py`, which tries `pdftotext -layout` and then `pypdf` when available.
 
-Use the bundled reference `shared/references/mineru-local.md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. The portable MinerU adapter is:
+Use the bundled reference `references/mineru-local.md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. The portable MinerU adapter is:
 
 ```bash
-shared/scripts/mineru_to_md.sh <pdf> --output <dir>
+scripts/mineru_to_md.sh <pdf> --output <dir>
 ```
 
 If a user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wrapper`. Online MinerU APIs are not used by default.
@@ -26,7 +26,7 @@ If a user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wr
 The shared implementation entry is:
 
 ```bash
-python shared/scripts/paper_workflow.py ingest <pdf> --workspace workspace
+python scripts/paper_workflow.py ingest <pdf> --workspace workspace
 ```
 
 ## Outputs
@@ -48,7 +48,7 @@ Create or update:
 workspace/knowledge/papers/<paper-id>.json
 ```
 
-Use `shared/templates/paper-memory.json` for the initial memory shape. Set `status.ingested` only after extraction, classification, archive path, and initial memory are written.
+Use `templates/paper-memory.json` for the initial memory shape. Set `status.ingested` only after extraction, classification, archive path, and initial memory are written.
 
 ## Classification
 

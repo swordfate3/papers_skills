@@ -20,7 +20,7 @@ If the plain explanation exists, use it as context but do not copy it.
 
 ## Output
 
-Use `shared/templates/expert-reading.md` and write:
+Use `templates/expert-reading.md` and write:
 
 ```text
 workspace/knowledge/expert-readings/<paper-id>.md
@@ -50,4 +50,4 @@ For CS/AI/ML/systems/security papers, pay special attention to datasets, metrics
 
 ## Shared Contracts
 
-Use `shared/templates` for the Markdown structure. Keep canonical structured facts in `workspace/knowledge/papers/<paper-id>.json`; use Markdown for richer argumentation.
+Use `templates/` for the Markdown structure. Keep canonical structured facts in `workspace/knowledge/papers/<paper-id>.json`; use Markdown for richer argumentation.

@@ -1,6 +1,14 @@
 import json
 
-from shared.scripts.paper_workflow import setup_workspace, update_state
+from skills.paper_research_workflow_imports import SCRIPTS_DIR
+
+import sys
+
+
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from paper_workflow import setup_workspace, update_state  # noqa: E402
 
 
 def test_setup_workspace_creates_expected_directories(tmp_path):

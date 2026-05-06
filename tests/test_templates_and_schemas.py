@@ -10,7 +10,7 @@ def load_json(relative: str):
 
 
 def test_paper_memory_schema_requires_core_fields():
-    schema = load_json("shared/schemas/paper-memory.schema.json")
+    schema = load_json("skills/paper-research-workflow/schemas/paper-memory.schema.json")
     assert schema["type"] == "object"
     for field in [
         "paper_id",
@@ -31,7 +31,7 @@ def test_paper_memory_schema_requires_core_fields():
 
 
 def test_paper_memory_template_matches_required_shape():
-    template = load_json("shared/templates/paper-memory.json")
+    template = load_json("skills/paper-research-workflow/templates/paper-memory.json")
     for field in [
         "paper_id",
         "title",
@@ -60,7 +60,7 @@ def test_markdown_templates_have_frontmatter_and_required_sections():
         "innovation-brief.md": ["来源论文", "创新假设", "最小实验", "风险与证伪"],
     }
     for filename, sections in required.items():
-        text = (ROOT / "shared/templates" / filename).read_text(encoding="utf-8")
+        text = (ROOT / "skills/paper-research-workflow/templates" / filename).read_text(encoding="utf-8")
         assert text.startswith("---\n")
         for section in sections:
             assert f"## {section}" in text

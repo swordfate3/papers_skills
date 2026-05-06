@@ -1,4 +1,0 @@
-interface:
-  display_name: "Paper Knowledge Base"
-  short_description: "Maintain paper memory files"
-  default_prompt: "Use $paper-knowledge-base to write and validate this paper in the file knowledge base."

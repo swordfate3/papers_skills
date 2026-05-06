@@ -1,4 +1,0 @@
-interface:
-  display_name: "Paper Plain Explainer"
-  short_description: "Explain papers in plain language"
-  default_prompt: "Use $paper-plain-explainer to explain this paper clearly for a beginner."

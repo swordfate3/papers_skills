@@ -17,7 +17,7 @@ If the paper is not ingested, ask the orchestrator to run `paper-ingest-classifi
 
 ## Output
 
-Use `shared/templates/paper-card.md` and write:
+Use `templates/paper-card.md` and write:
 
 ```text
 workspace/knowledge/cards/<paper-id>.md
@@ -43,6 +43,6 @@ Include a `## 术语对照` section for English papers.
 
 ## Shared Contracts
 
-Use `shared/templates` for the Markdown shape. Keep the JSON memory at `workspace/knowledge/papers/<paper-id>.json` machine-readable and concise.
+Use `templates/` for the Markdown shape. Keep the JSON memory at `workspace/knowledge/papers/<paper-id>.json` machine-readable and concise.
 
 If extraction quality is uncertain, include a short uncertainty note rather than pretending the text is complete.

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Paper Expert Reader"
-  short_description: "Deep expert reading for research papers"
-  default_prompt: "Use $paper-expert-reader to analyze this paper like a domain expert."

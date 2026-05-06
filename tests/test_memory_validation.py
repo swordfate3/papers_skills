@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
 
-from shared.scripts.paper_research_common import make_paper_id, normalize_slug, read_json, write_json
-from shared.scripts.validate_memory import validate_memory
+from skills.paper_research_workflow_imports import make_paper_id, normalize_slug, read_json, validate_memory, write_json
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,13 +27,13 @@ def test_read_write_json_round_trip(tmp_path):
 
 
 def test_validate_memory_accepts_template():
-    memory = json.loads((ROOT / "shared/templates/paper-memory.json").read_text(encoding="utf-8"))
-    errors = validate_memory(memory, ROOT / "shared/schemas/paper-memory.schema.json")
+    memory = json.loads((ROOT / "skills/paper-research-workflow/templates/paper-memory.json").read_text(encoding="utf-8"))
+    errors = validate_memory(memory, ROOT / "skills/paper-research-workflow/schemas/paper-memory.schema.json")
     assert errors == []
 
 
 def test_validate_memory_reports_missing_required_field():
-    memory = json.loads((ROOT / "shared/templates/paper-memory.json").read_text(encoding="utf-8"))
+    memory = json.loads((ROOT / "skills/paper-research-workflow/templates/paper-memory.json").read_text(encoding="utf-8"))
     del memory["paper_id"]
-    errors = validate_memory(memory, ROOT / "shared/schemas/paper-memory.schema.json")
+    errors = validate_memory(memory, ROOT / "skills/paper-research-workflow/schemas/paper-memory.schema.json")
     assert any("paper_id" in error for error in errors)

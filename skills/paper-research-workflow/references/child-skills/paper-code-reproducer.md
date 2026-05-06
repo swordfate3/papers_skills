@@ -18,7 +18,7 @@ Expert readings under `workspace/knowledge/expert-readings/<paper-id>.md` are us
 
 ## Output
 
-Use `shared/templates/reproduction-plan.md` and write:
+Use `templates/reproduction-plan.md` and write:
 
 ```text
 workspace/knowledge/reproductions/<paper-id>.md
@@ -45,4 +45,4 @@ Identify required datasets, checkpoints, hardware, environment, dependencies, me
 
 ## Shared Contracts
 
-Use `shared/templates` and keep `workspace/knowledge/papers/<paper-id>.json` as the canonical machine-readable record.
+Use `templates/` and keep `workspace/knowledge/papers/<paper-id>.json` as the canonical machine-readable record.

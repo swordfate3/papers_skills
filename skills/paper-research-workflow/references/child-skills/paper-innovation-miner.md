@@ -20,14 +20,14 @@ Use the target paper memory plus related memories from the same file knowledge b
 Use the transparent file-based query helper:
 
 ```bash
-python shared/scripts/kb_query.py --kb workspace/knowledge/papers --paper-id <paper-id> --limit 10
+python scripts/kb_query.py --kb workspace/knowledge/papers --paper-id <paper-id> --limit 10
 ```
 
 Version 1 retrieves by structured fields: domains, tasks, keywords, datasets, metrics, and limitations. It does not require embeddings or a vector database.
 
 ## Output
 
-Use `shared/templates/innovation-brief.md` and write:
+Use `templates/innovation-brief.md` and write:
 
 ```text
 workspace/knowledge/innovations/<innovation-id>.md
@@ -43,4 +43,4 @@ Do not claim verified novelty. State that the output is an ideation artifact and
 
 ## Shared Contracts
 
-Use `shared/templates` for structure and keep durable links in `workspace/knowledge/papers/<paper-id>.json`.
+Use `templates/` for structure and keep durable links in `workspace/knowledge/papers/<paper-id>.json`.

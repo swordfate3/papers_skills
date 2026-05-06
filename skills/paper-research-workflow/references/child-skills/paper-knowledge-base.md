@@ -24,16 +24,16 @@ workspace/knowledge/innovations/
 
 ## Shared Contracts
 
-Use `shared/templates` for new JSON and Markdown files. Validate memory with:
+Use `templates/` for new JSON and Markdown files. Validate memory with:
 
 ```bash
-python shared/scripts/validate_memory.py workspace/knowledge/papers/<paper-id>.json
+python scripts/validate_memory.py workspace/knowledge/papers/<paper-id>.json
 ```
 
 For full workspace validation, use:
 
 ```bash
-python shared/scripts/paper_workflow.py validate --workspace workspace
+python scripts/paper_workflow.py validate --workspace workspace
 ```
 
 ## Update Rules

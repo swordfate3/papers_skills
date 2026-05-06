@@ -4,15 +4,14 @@
 
 Build a semi-automated paper-reading skill suite for computer science, AI, machine learning, systems, and security papers. The suite accepts local PDFs, classifies and stores them, explains papers plainly, performs expert reading, supports code reproduction planning, writes structured results into a file-based knowledge base, and mines the knowledge base for new innovation ideas.
 
-The first version uses seven skills:
+The first version publishes one installable skill: `paper-research-workflow`. It bundles six internal child workflows as references:
 
-- `paper-research-workflow`: orchestrate the whole workflow.
-- `paper-ingest-classifier`: read PDFs, extract metadata/text, classify, and archive papers.
-- `paper-plain-explainer`: produce clear, beginner-friendly explanations.
-- `paper-expert-reader`: perform expert reading and extract assumptions, limitations, insights, and reusable ideas.
-- `paper-code-reproducer`: convert papers into reproduction plans and minimal code prototype tasks.
-- `paper-knowledge-base`: write and validate file-based paper memory.
-- `paper-innovation-miner`: retrieve related papers from the knowledge base and propose innovation directions.
+- `references/child-skills/paper-ingest-classifier.md`: read PDFs, extract metadata/text, classify, and archive papers.
+- `references/child-skills/paper-plain-explainer.md`: produce clear, beginner-friendly explanations.
+- `references/child-skills/paper-expert-reader.md`: perform expert reading and extract assumptions, limitations, insights, and reusable ideas.
+- `references/child-skills/paper-code-reproducer.md`: convert papers into reproduction plans and minimal code prototype tasks.
+- `references/child-skills/paper-knowledge-base.md`: write and validate file-based paper memory.
+- `references/child-skills/paper-innovation-miner.md`: retrieve related papers from the knowledge base and propose innovation directions.
 
 ## Scope
 
@@ -32,27 +31,27 @@ The first domain focus is code-related research papers: CS, AI, ML, systems, sec
 
 ## Architecture
 
-Use seven skills plus shared reusable resources.
+Use one self-contained installable skill. This avoids `npx skills add` installing a child skill without its shared runtime resources.
 
 ```text
 skills/
   paper-research-workflow/
-  paper-ingest-classifier/
-  paper-plain-explainer/
-  paper-expert-reader/
-  paper-code-reproducer/
-  paper-knowledge-base/
-  paper-innovation-miner/
-shared/
-  scripts/
-  schemas/
-  templates/
-  references/
+    SKILL.md
+    agents/openai.yaml
+    scripts/
+    schemas/
+    templates/
+    references/
+      child-skills/
 ```
 
-The skills contain concise procedural instructions. Shared scripts handle deterministic operations such as directory setup, PDF extraction routing, schema validation, state updates, and knowledge-base lookup. Templates provide stable output formats.
+`SKILL.md` contains concise orchestration instructions. `references/child-skills/` contains the six specialized workflows. Skill-local scripts handle deterministic operations such as directory setup, PDF extraction routing, schema validation, state updates, and knowledge-base lookup. Templates provide stable output formats.
 
-The suite should be installable as a set of skill folders, but the design keeps shared resources in one location to avoid duplication. Each skill references the shared resource paths relative to the suite root.
+The suite should be installable with:
+
+```bash
+npx skills add <owner>/<repo> --skill paper-research-workflow
+```
 
 ## Workspace Layout
 
@@ -179,7 +178,7 @@ Required fields:
 }
 ```
 
-Schema files in `shared/schemas/` define validation requirements. Markdown outputs may contain richer prose, but JSON memory is the canonical machine-readable record.
+Schema files in `schemas/` define validation requirements. Markdown outputs may contain richer prose, but JSON memory is the canonical machine-readable record.
 
 ## Skill Responsibilities
 
@@ -189,7 +188,7 @@ The orchestration skill routes user requests and runs the complete or partial wo
 
 - Detect whether the user wants ingest, explanation, expert reading, reproduction, knowledge-base update, or innovation mining.
 - Prefer the full pipeline when the user asks to "read this paper" without a narrower instruction.
-- Use `shared/scripts/paper_workflow.py` as the CLI entry when deterministic state updates are needed.
+- Use `scripts/paper_workflow.py` as the CLI entry when deterministic state updates are needed.
 - Keep the user informed about which stage is running and where outputs are written.
 - Stop and report extraction failures, missing PDFs, schema validation failures, or insufficient knowledge-base coverage.
 
@@ -197,8 +196,8 @@ The orchestration skill routes user requests and runs the complete or partial wo
 
 This skill handles local PDF reading and classification. Its PDF handling must be bundled with this suite so the skill package works on machines that do not have the author's personal skill directory.
 
-- Use `shared/references/pdf-processing.md` and `shared/scripts/extract_pdf.py` for normal text-based PDFs: `pdftotext -layout` first, then `pypdf` when available.
-- Use `shared/references/mineru-local.md` and `shared/scripts/mineru_to_md.sh` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs.
+- Use `references/pdf-processing.md` and `scripts/extract_pdf.py` for normal text-based PDFs: `pdftotext -layout` first, then `pypdf` when available.
+- Use `references/mineru-local.md` and `scripts/mineru_to_md.sh` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs.
 - Allow users to set `MINERU_TO_MD=/path/to/wrapper` when they already have a local MinerU wrapper. Do not make online MinerU API calls by default.
 
 It writes normalized extraction outputs under `workspace/extracted/<paper-id>/` and updates the initial paper memory fields.
@@ -275,11 +274,11 @@ It should avoid claiming novelty without caveats. The output is an ideation arti
 
 Version 1 should include these scripts:
 
-- `shared/scripts/paper_workflow.py`: unified CLI for setup, ingest, explain, expert-read, reproduce, validate, and mine.
-- `shared/scripts/extract_pdf.py`: route normal PDFs to lightweight extraction and complex PDFs to MinerU.
-- `shared/scripts/classify_paper.py`: classify paper domains, paper type, tasks, keywords, and archive path.
-- `shared/scripts/kb_query.py`: retrieve candidate related papers from JSON memory.
-- `shared/scripts/validate_memory.py`: validate JSON memory files against schemas.
+- `scripts/paper_workflow.py`: unified CLI for setup, ingest, explain, expert-read, reproduce, validate, and mine.
+- `scripts/extract_pdf.py`: route normal PDFs to lightweight extraction and complex PDFs to MinerU.
+- `scripts/classify_paper.py`: classify paper domains, paper type, tasks, keywords, and archive path.
+- `scripts/kb_query.py`: retrieve candidate related papers from JSON memory.
+- `scripts/validate_memory.py`: validate JSON memory files against schemas.
 
 Scripts should be deterministic helpers. They should not replace the agent's reading and reasoning; they prepare files, enforce contracts, and reduce repeated boilerplate.
 
@@ -287,11 +286,11 @@ Scripts should be deterministic helpers. They should not replace the agent's rea
 
 Version 1 should include:
 
-- `shared/templates/paper-memory.json`
-- `shared/templates/paper-card.md`
-- `shared/templates/expert-reading.md`
-- `shared/templates/reproduction-plan.md`
-- `shared/templates/innovation-brief.md`
+- `templates/paper-memory.json`
+- `templates/paper-card.md`
+- `templates/expert-reading.md`
+- `templates/reproduction-plan.md`
+- `templates/innovation-brief.md`
 
 Templates define required sections and frontmatter. The skills fill them with paper-specific content.
 

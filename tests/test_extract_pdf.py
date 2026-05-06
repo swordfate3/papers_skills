@@ -1,4 +1,12 @@
-from shared.scripts.extract_pdf import ExtractionMetrics, choose_extraction_strategy, normalize_mineru_outputs
+from skills.paper_research_workflow_imports import SCRIPTS_DIR
+
+import sys
+
+
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from extract_pdf import ExtractionMetrics, choose_extraction_strategy, normalize_mineru_outputs  # noqa: E402
 
 
 def test_choose_lightweight_for_good_text_pdf():

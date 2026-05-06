@@ -10,6 +10,10 @@
 
 ---
 
+## Packaging Update
+
+The final release shape was changed after implementation review: `paper-research-workflow` is now the only installable skill for `npx skills add`. The six child workflows are bundled under `skills/paper-research-workflow/references/child-skills/`, and scripts, schemas, templates, and references are bundled inside `skills/paper-research-workflow/`. Earlier tasks below describe the original multi-skill development path and are kept as historical implementation context.
+
 ## File Map
 
 - Create `skills/paper-research-workflow/SKILL.md`: orchestration skill.

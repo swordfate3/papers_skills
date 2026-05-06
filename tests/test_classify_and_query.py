@@ -1,5 +1,13 @@
-from shared.scripts.classify_paper import classify_text, infer_year
-from shared.scripts.kb_query import rank_related_papers
+from skills.paper_research_workflow_imports import SCRIPTS_DIR
+
+import sys
+
+
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from classify_paper import classify_text, infer_year  # noqa: E402
+from kb_query import rank_related_papers  # noqa: E402
 
 
 def test_infer_year_prefers_recent_paper_year():
