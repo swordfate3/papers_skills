@@ -50,6 +50,8 @@ python scripts/paper_workflow.py ingest <pdf> --prefer-mineru --mineru-backend s
 
 If the user does not want to configure a token, use `--mineru-backend agent-cloud` for lightweight cloud parsing or let `--mineru-backend auto` choose the best available backend.
 
+Cloud MinerU requests default to direct connections and ignore system proxy environment variables. Use `MINERU_USE_PROXY=1` only if the user explicitly asks to route MinerU through a proxy.
+
 ## Shared Contracts
 
 Use `scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.

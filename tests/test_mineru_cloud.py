@@ -92,3 +92,61 @@ def test_standard_cloud_uses_batch_upload_flow(monkeypatch, tmp_path):
     assert calls[0][2]["files"] == [{"name": "paper.pdf"}]
     assert any(call[1].endswith("/api/v4/extract-results/batch/batch-1") for call in calls)
     assert not any("/api/v4/extract/task" in call[1] for call in calls if isinstance(call[1], str))
+
+
+def test_cloud_requests_ignore_system_proxy_by_default(monkeypatch):
+    opener_handlers = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    class FakeOpener:
+        def open(self, request, timeout=60):
+            return FakeResponse()
+
+    def fake_build_opener(*handlers):
+        opener_handlers.extend(handlers)
+        return FakeOpener()
+
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9")
+    monkeypatch.delenv("MINERU_USE_PROXY", raising=False)
+    monkeypatch.setattr(mineru_cloud.urllib.request, "build_opener", fake_build_opener)
+
+    mineru_cloud._json_request("GET", "https://mineru.net/api/test")
+
+    assert opener_handlers
+    assert isinstance(opener_handlers[0], mineru_cloud.urllib.request.ProxyHandler)
+    assert opener_handlers[0].proxies == {}
+
+
+def test_cloud_requests_can_opt_into_system_proxy(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    opened = []
+
+    def fake_urlopen(request, timeout=60):
+        opened.append((request, timeout))
+        return FakeResponse()
+
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9")
+    monkeypatch.setenv("MINERU_USE_PROXY", "1")
+    monkeypatch.setattr(mineru_cloud.urllib.request, "urlopen", fake_urlopen)
+
+    mineru_cloud._json_request("GET", "https://mineru.net/api/test")
+
+    assert opened

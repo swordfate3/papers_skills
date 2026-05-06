@@ -133,6 +133,12 @@ python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --min
 
 `auto` 会按顺序选择 `MINERU_TO_MD`、`MINERU_TOKEN` / 已保存 Token、本机 `mineru`、最后回退到 `agent-cloud`。
 
+云 MinerU 默认不使用系统代理环境变量，避免错误代理导致 `mineru.net` 解析或连接失败。如果确实需要代理，显式设置：
+
+```bash
+MINERU_USE_PROXY=1 python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend agent-cloud
+```
+
 如果用户已有自己的 MinerU wrapper：
 
 ```bash

@@ -32,6 +32,8 @@ python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backe
 
 `auto` prefers `MINERU_TO_MD`, then configured high-quality cloud token, then local `mineru`, then lightweight `agent-cloud`.
 
+Cloud MinerU requests ignore system proxy environment variables by default. Set `MINERU_USE_PROXY=1` only when the user explicitly wants MinerU requests to use their system proxy.
+
 For other machines, users can still provide a wrapper without editing this skill:
 
 ```bash

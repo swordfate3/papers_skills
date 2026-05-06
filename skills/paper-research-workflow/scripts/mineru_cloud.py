@@ -92,7 +92,7 @@ def _json_request(
         data = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _open_url(request, timeout=timeout) as response:
             body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:  # pragma: no cover - network path
         detail = exc.read().decode("utf-8", errors="replace")
@@ -107,7 +107,7 @@ def _put_file(url: str, path: Path, timeout: int = 300) -> None:
     request = urllib.request.Request(url, data=data, method="PUT")
     request.add_header("Content-Type", "application/pdf")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _open_url(request, timeout=timeout) as response:
             response.read()
     except urllib.error.HTTPError as exc:  # pragma: no cover - network path
         detail = exc.read().decode("utf-8", errors="replace")
@@ -118,13 +118,24 @@ def _put_file(url: str, path: Path, timeout: int = 300) -> None:
 
 def _download(url: str, output: Path, timeout: int = 300) -> None:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with _open_url(url, timeout=timeout) as response:
             output.write_bytes(response.read())
     except urllib.error.HTTPError as exc:  # pragma: no cover - network path
         detail = exc.read().decode("utf-8", errors="replace")
         raise MinerUApiError(f"MinerU download HTTP {exc.code}: {detail}") from exc
     except urllib.error.URLError as exc:  # pragma: no cover - network path
         raise MinerUApiError(f"MinerU download failed: {exc}") from exc
+
+
+def _use_system_proxy() -> bool:
+    return os.environ.get("MINERU_USE_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _open_url(request: urllib.request.Request | str, timeout: int):
+    if _use_system_proxy():
+        return urllib.request.urlopen(request, timeout=timeout)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    return opener.open(request, timeout=timeout)
 
 
 def _extract_zip(zip_path: Path, output_dir: Path) -> None:
