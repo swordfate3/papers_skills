@@ -1,0 +1,65 @@
+{
+  "paper_id": "2024-transformer-systems-a11111",
+  "title": "Transformer Scheduling for Distributed Training Systems",
+  "authors": ["Example Author"],
+  "year": 2024,
+  "venue": "OSDI",
+  "source": {
+    "input_path": "workspace/inbox/transformer-systems.pdf",
+    "archived_path": "workspace/papers/by-domain/machine-learning/2024-transformer-systems-a11111.pdf",
+    "doi": "",
+    "arxiv_id": "",
+    "source_url": ""
+  },
+  "classification": {
+    "domains": ["machine-learning", "systems"],
+    "paper_type": "system",
+    "tasks": ["scheduling", "classification"],
+    "keywords": ["transformer", "distributed", "scheduler", "latency"]
+  },
+  "core": {
+    "problem": "Distributed training schedulers do not adapt well to changing workload structure.",
+    "motivation": "Better scheduling can reduce training latency and resource waste.",
+    "method": "Use transformer-based workload representations to guide scheduling decisions.",
+    "contributions": ["A learned scheduling policy", "A system integration"],
+    "claimed_results": ["Lower latency than heuristic baselines"]
+  },
+  "evidence": {
+    "datasets": ["ImageNet"],
+    "metrics": ["accuracy", "latency"],
+    "baselines": ["FIFO", "heuristic scheduler"],
+    "main_tables": ["Table 1 latency comparison"],
+    "ablations": ["without transformer encoder"]
+  },
+  "critique": {
+    "assumptions": ["Workload traces represent deployment traffic"],
+    "limitations": ["high compute"],
+    "failure_modes": ["distribution shift"],
+    "threats_to_validity": ["single-cluster evaluation"]
+  },
+  "reproduction": {
+    "code_available": false,
+    "difficulty": "medium",
+    "compute_need": "multi-GPU cluster or simulator",
+    "data_need": "training traces",
+    "minimum_viable_reproduction": "Simulate scheduling decisions on released traces.",
+    "blocking_unknowns": ["trace availability"]
+  },
+  "innovation": {
+    "innovation_seeds": ["Use symbolic constraints to bound learned schedulers"],
+    "transferable_ideas": ["learned scheduling representation"],
+    "related_paper_ids": []
+  },
+  "artifacts": {
+    "plain_explanation": "workspace/knowledge/cards/2024-transformer-systems-a11111.md",
+    "expert_reading": "workspace/knowledge/expert-readings/2024-transformer-systems-a11111.md",
+    "reproduction_plan": "workspace/knowledge/reproductions/2024-transformer-systems-a11111.md"
+  },
+  "status": {
+    "ingested": true,
+    "explained": true,
+    "expert_read": true,
+    "reproduction_planned": true,
+    "kb_validated": true
+  }
+}

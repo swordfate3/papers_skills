@@ -1,0 +1,65 @@
+{
+  "paper_id": "2023-security-fuzzing-b22222",
+  "title": "Constraint-Guided Fuzzing for Secure Software Systems",
+  "authors": ["Example Researcher"],
+  "year": 2023,
+  "venue": "USENIX Security",
+  "source": {
+    "input_path": "workspace/inbox/security-fuzzing.pdf",
+    "archived_path": "workspace/papers/by-domain/security/2023-security-fuzzing-b22222.pdf",
+    "doi": "",
+    "arxiv_id": "",
+    "source_url": ""
+  },
+  "classification": {
+    "domains": ["security", "software-engineering", "systems"],
+    "paper_type": "empirical",
+    "tasks": ["fuzzing", "scheduling"],
+    "keywords": ["fuzzing", "symbolic-execution", "distributed", "latency"]
+  },
+  "core": {
+    "problem": "Fuzzers waste effort on inputs that violate known program constraints.",
+    "motivation": "Constraint awareness can improve vulnerability discovery efficiency.",
+    "method": "Combine symbolic execution signals with a fuzzing scheduler.",
+    "contributions": ["A constraint-guided prioritization algorithm", "A security benchmark evaluation"],
+    "claimed_results": ["Finds more bugs under the same time budget"]
+  },
+  "evidence": {
+    "datasets": ["OSS-Fuzz"],
+    "metrics": ["bugs found", "latency"],
+    "baselines": ["AFL", "libFuzzer"],
+    "main_tables": ["Table 2 bug findings"],
+    "ablations": ["without symbolic constraints"]
+  },
+  "critique": {
+    "assumptions": ["Constraint extraction is affordable"],
+    "limitations": ["high compute"],
+    "failure_modes": ["path explosion"],
+    "threats_to_validity": ["benchmark selection"]
+  },
+  "reproduction": {
+    "code_available": null,
+    "difficulty": "high",
+    "compute_need": "CPU fuzzing cluster",
+    "data_need": "target programs and seeds",
+    "minimum_viable_reproduction": "Run guided scheduling on a small target set.",
+    "blocking_unknowns": ["benchmark harness details"]
+  },
+  "innovation": {
+    "innovation_seeds": ["Apply learned scheduling to fuzzing energy assignment"],
+    "transferable_ideas": ["constraint-guided prioritization"],
+    "related_paper_ids": []
+  },
+  "artifacts": {
+    "plain_explanation": "workspace/knowledge/cards/2023-security-fuzzing-b22222.md",
+    "expert_reading": "workspace/knowledge/expert-readings/2023-security-fuzzing-b22222.md",
+    "reproduction_plan": "workspace/knowledge/reproductions/2023-security-fuzzing-b22222.md"
+  },
+  "status": {
+    "ingested": true,
+    "explained": true,
+    "expert_read": true,
+    "reproduction_planned": true,
+    "kb_validated": true
+  }
+}
