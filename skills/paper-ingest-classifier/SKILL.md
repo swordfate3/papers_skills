@@ -1,85 +1,57 @@
 ---
 name: paper-ingest-classifier
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Use when the user provides a local research PDF or asks to ingest, extract, classify, archive, or create initial memory for a computer-science paper. Handles lightweight PDF extraction, MinerU fallback, metadata hints, paper IDs, and workspace storage.
 ---
 
 # Paper Ingest Classifier
 
-## Overview
+## Inputs
 
-[TODO: 1-2 sentences explaining what this skill enables]
+Accept a local PDF path or a PDF placed under `workspace/inbox/`. Version 1 does not download from DOI, arXiv, OpenReview, ACM, IEEE, or URLs.
 
-## Structuring This Skill
+## Extraction Strategy
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+Use `.agents/skills/pdf` patterns for normal text-based PDFs: `pdftotext -layout`, `pypdf`, or `pdfplumber`.
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" -> "Reading" -> "Creating" -> "Editing"
-- Structure: ## Overview -> ## Workflow Decision Tree -> ## Step 1 -> ## Step 2...
+Use `.agents/skills/mineru-doc-to-md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. Prefer its wrapper:
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" -> "Merge PDFs" -> "Split PDFs" -> "Extract Text"
-- Structure: ## Overview -> ## Quick Start -> ## Task Category 1 -> ## Task Category 2...
+```bash
+/home/fate/.agents/skills/mineru-doc-to-md/scripts/mineru_to_md.sh <pdf> --output <dir>
+```
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" -> "Colors" -> "Typography" -> "Features"
-- Structure: ## Overview -> ## Guidelines -> ## Specifications -> ## Usage...
+Treat `.agents/skills/mineru` API guidance as optional reference only. Do not make online MinerU API calls by default.
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" -> numbered capability list
-- Structure: ## Overview -> ## Core Capabilities -> ### 1. Feature -> ### 2. Feature...
+The shared implementation entry is:
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+```bash
+python shared/scripts/paper_workflow.py ingest <pdf> --workspace workspace
+```
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+## Outputs
 
-## [TODO: Replace with the first main section based on chosen structure]
+Write normalized extraction artifacts to:
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+```text
+workspace/extracted/<paper-id>/
+  text.md
+  tables.md
+  equations.md
+  figures.md
+  manifest.json
+```
 
-## Resources (optional)
+Create or update:
 
-Create only the resource directories this skill actually needs. Delete this section if no resources are required.
+```text
+workspace/knowledge/papers/<paper-id>.json
+```
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+Use `shared/templates/paper-memory.json` for the initial memory shape. Set `status.ingested` only after extraction, classification, archive path, and initial memory are written.
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+## Classification
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+Classify CS/AI/ML/systems/security papers by domains, paper type, tasks, and keywords. Prefer transparent evidence from title, abstract, method, experiments, datasets, and metrics. Keep uncertain fields empty or marked `unknown`; do not guess venue, authors, DOI, or arXiv ID without evidence.
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Codex for patching or environment adjustments.
+## Failure Handling
 
-### references/
-Documentation and reference material intended to be loaded into context to inform Codex's process and thinking.
-
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
-
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Codex should reference while working.
-
-### assets/
-Files not intended to be loaded into context, but rather used within the output Codex produces.
-
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
-
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
-
----
-
-**Not every skill requires all three types of resources.**
+If lightweight extraction returns too little text, retry with MinerU unless the user disabled it. If MinerU is unavailable, write `workspace/extracted/<paper-id>/manifest.json` or the incoming extraction manifest with `status: failed`, then report the command and reason.
