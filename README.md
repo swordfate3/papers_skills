@@ -14,13 +14,11 @@ skills/paper-research-workflow/references/child-skills/
 
 ## 安装
 
-发布到 GitHub 后，用户可以使用 `npx skills add` 安装：
+用户可以使用 `npx skills add` 直接从当前 GitHub 仓库安装：
 
 ```bash
-npx skills add <owner>/<repo> --skill paper-research-workflow
+npx skills add swordfate3/papers_skills --skill paper-research-workflow
 ```
-
-将 `<owner>/<repo>` 替换成真实 GitHub 仓库名即可。
 
 ## 包含能力
 
