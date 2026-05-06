@@ -34,6 +34,42 @@ WORKSPACE_DIRS = [
     "state",
 ]
 
+DEFAULT_WORKSPACE_CONFIG = ".paper-workspace.json"
+
+
+def default_config_path() -> Path:
+    return Path(__file__).resolve().parents[1] / DEFAULT_WORKSPACE_CONFIG
+
+
+def save_default_workspace(workspace: Path, config_path: Path | None = None) -> Path:
+    path = config_path or default_config_path()
+    resolved = workspace.expanduser().resolve()
+    write_json(path, {"workspace": str(resolved)})
+    return resolved
+
+
+def load_default_workspace(config_path: Path | None = None) -> Path | None:
+    path = config_path or default_config_path()
+    if not path.exists():
+        return None
+    data = read_json(path)
+    workspace = data.get("workspace") if isinstance(data, dict) else None
+    if not workspace:
+        return None
+    return Path(workspace).expanduser().resolve()
+
+
+def resolve_workspace(workspace: Path | None, config_path: Path | None = None) -> Path:
+    if workspace is not None:
+        return workspace.expanduser().resolve()
+    configured = load_default_workspace(config_path)
+    if configured is not None:
+        return configured
+    raise SystemExit(
+        "No workspace configured. Run: python scripts/paper_workflow.py setup "
+        "--workspace /path/to/paper-library --save-default"
+    )
+
 
 def setup_workspace(workspace: Path) -> None:
     for relative in WORKSPACE_DIRS:
@@ -161,45 +197,60 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     setup_parser = subparsers.add_parser("setup")
-    setup_parser.add_argument("--workspace", type=Path, default=Path("workspace"))
+    setup_parser.add_argument("--workspace", type=Path, required=True)
+    setup_parser.add_argument("--save-default", action="store_true")
 
     status_parser = subparsers.add_parser("status")
-    status_parser.add_argument("--workspace", type=Path, default=Path("workspace"))
+    status_parser.add_argument("--workspace", type=Path, default=None)
 
     validate_parser = subparsers.add_parser("validate")
-    validate_parser.add_argument("--workspace", type=Path, default=Path("workspace"))
+    validate_parser.add_argument("--workspace", type=Path, default=None)
 
     query_parser = subparsers.add_parser("query")
-    query_parser.add_argument("--workspace", type=Path, default=Path("workspace"))
+    query_parser.add_argument("--workspace", type=Path, default=None)
     query_parser.add_argument("--paper-id", required=True)
     query_parser.add_argument("--limit", type=int, default=10)
 
     ingest_parser = subparsers.add_parser("ingest")
     ingest_parser.add_argument("pdf", type=Path)
-    ingest_parser.add_argument("--workspace", type=Path, default=Path("workspace"))
+    ingest_parser.add_argument("--workspace", type=Path, default=None)
     ingest_parser.add_argument("--prefer-mineru", action="store_true")
     ingest_parser.add_argument("--no-mineru", action="store_true")
 
     args = parser.parse_args()
 
     if args.command == "setup":
-        setup_workspace(args.workspace)
-        print(args.workspace)
+        workspace = resolve_workspace(args.workspace)
+        setup_workspace(workspace)
+        if args.save_default:
+            save_default_workspace(workspace)
+        print(workspace)
         return 0
     if args.command == "status":
-        print(json.dumps(load_state(args.workspace), ensure_ascii=False, indent=2))
+        print(json.dumps(load_state(resolve_workspace(args.workspace)), ensure_ascii=False, indent=2))
         return 0
     if args.command == "validate":
-        results = validate_workspace(args.workspace)
+        results = validate_workspace(resolve_workspace(args.workspace))
         print(json.dumps(results, ensure_ascii=False, indent=2))
         return 0 if all(not errors for errors in results.values()) else 1
     if args.command == "query":
-        print(json.dumps(query_workspace(args.workspace, args.paper_id, args.limit), ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                query_workspace(resolve_workspace(args.workspace), args.paper_id, args.limit),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
     if args.command == "ingest":
         print(
             json.dumps(
-                ingest_pdf(args.workspace, args.pdf, prefer_mineru=args.prefer_mineru, no_mineru=args.no_mineru),
+                ingest_pdf(
+                    resolve_workspace(args.workspace),
+                    args.pdf,
+                    prefer_mineru=args.prefer_mineru,
+                    no_mineru=args.no_mineru,
+                ),
                 ensure_ascii=False,
                 indent=2,
             )

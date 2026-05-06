@@ -26,8 +26,10 @@ If a user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wr
 The shared implementation entry is:
 
 ```bash
-python scripts/paper_workflow.py ingest <pdf> --workspace workspace
+python scripts/paper_workflow.py ingest <pdf>
 ```
+
+If the user explicitly wants a different destination, pass `--workspace <other-dir>`.
 
 ## Outputs
 

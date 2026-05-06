@@ -4,3 +4,4 @@ __pycache__/
 *.py[cod]
 workspace/
 workspace-*/
+skills/paper-research-workflow/.paper-workspace.json

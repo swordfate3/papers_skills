@@ -57,11 +57,13 @@ skills/paper-research-workflow/
 
 ## 快速验证
 
-安装后，进入已安装的 `paper-research-workflow` 技能目录，运行：
+首次使用时，先为论文库选择一个长期目录。之后所有论文 PDF、提取结果、论文卡片、专家阅读、复现计划、创新简报和知识库 JSON 都会保存在这个目录下。
+
+进入已安装的 `paper-research-workflow` 技能目录，运行：
 
 ```bash
-python scripts/paper_workflow.py setup --workspace workspace
-python scripts/paper_workflow.py status --workspace workspace
+python scripts/paper_workflow.py setup --workspace /path/to/paper-library --save-default
+python scripts/paper_workflow.py status
 ```
 
 如果输出类似下面内容，说明基础工作区初始化正常：
@@ -77,13 +79,13 @@ python scripts/paper_workflow.py status --workspace workspace
 处理普通本地 PDF，可以先不启用 MinerU：
 
 ```bash
-python scripts/paper_workflow.py ingest /path/to/paper.pdf --workspace workspace --no-mineru
+python scripts/paper_workflow.py ingest /path/to/paper.pdf --no-mineru
 ```
 
 运行后会生成：
 
 ```text
-workspace/
+<paper-library>/
   extracted/<paper-id>/
   knowledge/papers/<paper-id>.json
   papers/
@@ -106,7 +108,7 @@ pdftotext -layout
 - 或提供自己的 MinerU wrapper：
 
 ```bash
-MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /path/to/paper.pdf --workspace workspace
+MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /path/to/paper.pdf
 ```
 
 ## 输出说明
@@ -114,7 +116,7 @@ MINERU_TO_MD=/path/to/mineru_to_md.sh python scripts/paper_workflow.py ingest /p
 每篇论文都会维护一份结构化论文记忆：
 
 ```text
-workspace/knowledge/papers/<paper-id>.json
+<paper-library>/knowledge/papers/<paper-id>.json
 ```
 
 这份 JSON 是机器可读的核心记录，包含：
@@ -130,10 +132,10 @@ workspace/knowledge/papers/<paper-id>.json
 Markdown 输出会放在：
 
 ```text
-workspace/knowledge/cards/
-workspace/knowledge/expert-readings/
-workspace/knowledge/reproductions/
-workspace/knowledge/innovations/
+<paper-library>/knowledge/cards/
+<paper-library>/knowledge/expert-readings/
+<paper-library>/knowledge/reproductions/
+<paper-library>/knowledge/innovations/
 ```
 
 ## 开发验证

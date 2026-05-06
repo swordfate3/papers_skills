@@ -49,3 +49,36 @@ def test_single_skill_install_smoke_test(tmp_path):
     )
     assert status.returncode == 0, status.stderr
     assert '"papers": {}' in status.stdout
+
+
+def test_single_skill_default_workspace_smoke_test(tmp_path):
+    installed = tmp_path / "paper-research-workflow"
+    shutil.copytree(SKILL_DIR, installed)
+    workspace = tmp_path / "long-term-paper-library"
+
+    setup = subprocess.run(
+        [
+            sys.executable,
+            "scripts/paper_workflow.py",
+            "setup",
+            "--workspace",
+            str(workspace),
+            "--save-default",
+        ],
+        cwd=installed,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert setup.returncode == 0, setup.stderr
+    assert (installed / ".paper-workspace.json").is_file()
+
+    status = subprocess.run(
+        [sys.executable, "scripts/paper_workflow.py", "status"],
+        cwd=installed,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert status.returncode == 0, status.stderr
+    assert '"papers": {}' in status.stdout

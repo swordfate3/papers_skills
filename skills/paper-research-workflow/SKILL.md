@@ -20,9 +20,23 @@ Route natural user requests to the six internal child workflows:
 
 Use this skill when the user asks to "read this paper", process a local PDF, update the paper knowledge base, prepare a reproduction plan, or find innovation ideas from stored papers.
 
+## First-Run Rule
+
+Before processing the first paper, check whether `.paper-workspace.json` exists in this skill directory. If it does not exist, ask the user where to create the long-term paper workspace. Do not silently create `workspace/` by default.
+
+After the user chooses a directory, run:
+
+```bash
+python scripts/paper_workflow.py setup --workspace <chosen-dir> --save-default
+```
+
+All later paper PDFs, extraction artifacts, Markdown analyses, reproduction plans, innovation briefs, and knowledge-base JSON files must use this saved workspace unless the user explicitly overrides it.
+
 ## Shared Contracts
 
 Use `scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.
+
+For later requests, use the saved default workspace unless the user explicitly overrides it with `--workspace`.
 
 Use `templates/` for output shape. Use `schemas/` for validation. Use `references/` for PDF extraction, MinerU, and child workflow guidance. Every paper should maintain canonical memory at:
 
@@ -30,7 +44,7 @@ Use `templates/` for output shape. Use `schemas/` for validation. Use `reference
 workspace/knowledge/papers/<paper-id>.json
 ```
 
-Default workspace:
+Workspace layout:
 
 ```text
 workspace/inbox/
@@ -46,7 +60,7 @@ workspace/state/papers.json
 
 For a full paper read:
 
-1. Run or instruct setup with `python scripts/paper_workflow.py setup --workspace workspace`.
+1. If no default workspace exists, ask where to create it and run `python scripts/paper_workflow.py setup --workspace <chosen-dir> --save-default`.
 2. Read `references/child-skills/paper-ingest-classifier.md` to extract, classify, archive, and create initial memory.
 3. Read `references/child-skills/paper-plain-explainer.md` to create the plain-language card.
 4. Read `references/child-skills/paper-expert-reader.md` to create the expert reading and innovation seeds.
