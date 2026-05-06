@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["title", "type", "status", "source_papers"],
+  "properties": {
+    "title": {"type": "string"},
+    "type": {"type": "string", "enum": ["paper_card"]},
+    "status": {"type": "string"},
+    "source_papers": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

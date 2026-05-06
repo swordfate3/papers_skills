@@ -1,0 +1,143 @@
+{
+  "type": "object",
+  "required": [
+    "paper_id",
+    "title",
+    "authors",
+    "year",
+    "venue",
+    "source",
+    "classification",
+    "core",
+    "evidence",
+    "critique",
+    "reproduction",
+    "innovation",
+    "artifacts",
+    "status"
+  ],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "title": {"type": "string"},
+    "authors": {"type": "array", "items": {"type": "string"}},
+    "year": {"type": ["integer", "null"]},
+    "venue": {"type": "string"},
+    "source": {
+      "type": "object",
+      "required": ["input_path", "archived_path", "doi", "arxiv_id", "source_url"],
+      "properties": {
+        "input_path": {"type": "string"},
+        "archived_path": {"type": "string"},
+        "doi": {"type": "string"},
+        "arxiv_id": {"type": "string"},
+        "source_url": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "classification": {
+      "type": "object",
+      "required": ["domains", "paper_type", "tasks", "keywords"],
+      "properties": {
+        "domains": {"type": "array", "items": {"type": "string"}},
+        "paper_type": {"type": "string"},
+        "tasks": {"type": "array", "items": {"type": "string"}},
+        "keywords": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "core": {
+      "type": "object",
+      "required": ["problem", "motivation", "method", "contributions", "claimed_results"],
+      "properties": {
+        "problem": {"type": "string"},
+        "motivation": {"type": "string"},
+        "method": {"type": "string"},
+        "contributions": {"type": "array", "items": {"type": "string"}},
+        "claimed_results": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["datasets", "metrics", "baselines", "main_tables", "ablations"],
+      "properties": {
+        "datasets": {"type": "array", "items": {"type": "string"}},
+        "metrics": {"type": "array", "items": {"type": "string"}},
+        "baselines": {"type": "array", "items": {"type": "string"}},
+        "main_tables": {"type": "array", "items": {"type": "string"}},
+        "ablations": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "critique": {
+      "type": "object",
+      "required": ["assumptions", "limitations", "failure_modes", "threats_to_validity"],
+      "properties": {
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "limitations": {"type": "array", "items": {"type": "string"}},
+        "failure_modes": {"type": "array", "items": {"type": "string"}},
+        "threats_to_validity": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "reproduction": {
+      "type": "object",
+      "required": [
+        "code_available",
+        "difficulty",
+        "compute_need",
+        "data_need",
+        "minimum_viable_reproduction",
+        "blocking_unknowns"
+      ],
+      "properties": {
+        "code_available": {"type": ["boolean", "null"]},
+        "difficulty": {"type": "string", "enum": ["unknown", "low", "medium", "high"]},
+        "compute_need": {"type": "string"},
+        "data_need": {"type": "string"},
+        "minimum_viable_reproduction": {"type": "string"},
+        "blocking_unknowns": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "innovation": {
+      "type": "object",
+      "required": ["innovation_seeds", "transferable_ideas", "related_paper_ids"],
+      "properties": {
+        "innovation_seeds": {"type": "array", "items": {"type": "string"}},
+        "transferable_ideas": {"type": "array", "items": {"type": "string"}},
+        "related_paper_ids": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["plain_explanation", "expert_reading", "reproduction_plan"],
+      "properties": {
+        "plain_explanation": {"type": "string"},
+        "expert_reading": {"type": "string"},
+        "reproduction_plan": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "required": [
+        "ingested",
+        "explained",
+        "expert_read",
+        "reproduction_planned",
+        "kb_validated"
+      ],
+      "properties": {
+        "ingested": {"type": "boolean"},
+        "explained": {"type": "boolean"},
+        "expert_read": {"type": "boolean"},
+        "reproduction_planned": {"type": "boolean"},
+        "kb_validated": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

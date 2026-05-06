@@ -1,0 +1,65 @@
+{
+  "paper_id": "",
+  "title": "",
+  "authors": [],
+  "year": null,
+  "venue": "",
+  "source": {
+    "input_path": "",
+    "archived_path": "",
+    "doi": "",
+    "arxiv_id": "",
+    "source_url": ""
+  },
+  "classification": {
+    "domains": [],
+    "paper_type": "",
+    "tasks": [],
+    "keywords": []
+  },
+  "core": {
+    "problem": "",
+    "motivation": "",
+    "method": "",
+    "contributions": [],
+    "claimed_results": []
+  },
+  "evidence": {
+    "datasets": [],
+    "metrics": [],
+    "baselines": [],
+    "main_tables": [],
+    "ablations": []
+  },
+  "critique": {
+    "assumptions": [],
+    "limitations": [],
+    "failure_modes": [],
+    "threats_to_validity": []
+  },
+  "reproduction": {
+    "code_available": null,
+    "difficulty": "unknown",
+    "compute_need": "unknown",
+    "data_need": "unknown",
+    "minimum_viable_reproduction": "",
+    "blocking_unknowns": []
+  },
+  "innovation": {
+    "innovation_seeds": [],
+    "transferable_ideas": [],
+    "related_paper_ids": []
+  },
+  "artifacts": {
+    "plain_explanation": "",
+    "expert_reading": "",
+    "reproduction_plan": ""
+  },
+  "status": {
+    "ingested": false,
+    "explained": false,
+    "expert_read": false,
+    "reproduction_planned": false,
+    "kb_validated": false
+  }
+}
