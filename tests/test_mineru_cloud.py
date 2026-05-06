@@ -190,27 +190,77 @@ def test_cloud_requests_can_opt_into_system_proxy(monkeypatch):
 def test_presigned_upload_does_not_add_content_type_header(monkeypatch, tmp_path):
     pdf = tmp_path / "paper.pdf"
     pdf.write_bytes(b"%PDF")
-    captured = []
+    headers = []
 
     class FakeResponse:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, traceback):
-            return False
+        status = 200
 
         def read(self):
             return b""
 
-    def fake_open_url(request, timeout=300):
-        captured.append(request)
-        return FakeResponse()
+    class FakeConnection:
+        def __init__(self, netloc, timeout=300, context=None):
+            self.netloc = netloc
 
-    monkeypatch.setattr(mineru_cloud, "_open_url", fake_open_url)
+        def putrequest(self, method, target):
+            pass
+
+        def putheader(self, name, value):
+            headers.append((name, value))
+
+        def endheaders(self, data):
+            pass
+
+        def getresponse(self):
+            return FakeResponse()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(mineru_cloud.http.client, "HTTPSConnection", FakeConnection)
 
     mineru_cloud._put_file("https://oss.example/paper.pdf?signature=abc", pdf)
 
-    assert captured
-    assert captured[0].get_method() == "PUT"
-    assert captured[0].get_header("Content-type") is None
-    assert captured[0].get_header("Content-Type") is None
+    assert ("Content-Length", str(len(b"%PDF"))) in headers
+    assert not any(name.lower() == "content-type" for name, _ in headers)
+
+
+def test_presigned_upload_uses_low_level_https_without_content_type(monkeypatch, tmp_path):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF")
+    calls = []
+
+    class FakeResponse:
+        status = 200
+
+        def read(self):
+            return b""
+
+    class FakeConnection:
+        def __init__(self, netloc, timeout=300, context=None):
+            calls.append(("init", netloc, timeout, context is not None))
+
+        def putrequest(self, method, target):
+            calls.append(("putrequest", method, target))
+
+        def putheader(self, name, value):
+            calls.append(("putheader", name, value))
+
+        def endheaders(self, data):
+            calls.append(("endheaders", data))
+
+        def getresponse(self):
+            calls.append(("getresponse",))
+            return FakeResponse()
+
+        def close(self):
+            calls.append(("close",))
+
+    monkeypatch.setattr(mineru_cloud.http.client, "HTTPSConnection", FakeConnection)
+
+    mineru_cloud._put_file("https://oss.example/path/paper.pdf?signature=abc", pdf)
+
+    assert ("putrequest", "PUT", "/path/paper.pdf?signature=abc") in calls
+    assert ("putheader", "Host", "oss.example") in calls
+    assert ("putheader", "Content-Length", str(len(b"%PDF"))) in calls
+    assert not any(call[0] == "putheader" and call[1].lower() == "content-type" for call in calls)

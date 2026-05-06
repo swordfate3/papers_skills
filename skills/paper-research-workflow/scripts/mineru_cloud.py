@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -103,21 +105,32 @@ def _json_request(
 
 
 def _put_file(url: str, path: Path, timeout: int = 300) -> None:
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https":
+        raise MinerUApiError(f"MinerU upload URL must use https: {url}")
+
     data = path.read_bytes()
-    request = urllib.request.Request(url, data=data, method="PUT")
+    target = urllib.parse.urlunsplit(("", "", parsed.path, parsed.query, ""))
+    context = ssl.create_default_context()
+    connection = http.client.HTTPSConnection(parsed.netloc, timeout=timeout, context=context)
     try:
-        with _open_url(request, timeout=timeout) as response:
-            response.read()
-    except urllib.error.HTTPError as exc:  # pragma: no cover - network path
-        detail = exc.read().decode("utf-8", errors="replace")
-        if "SignatureDoesNotMatch" in detail:
-            detail = (
-                "OSS presigned upload signature mismatch. The request was sent without extra Content-Type headers; "
-                f"server detail: {detail}"
-            )
-        raise MinerUApiError(f"MinerU upload HTTP {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:  # pragma: no cover - network path
+        connection.putrequest("PUT", target)
+        connection.putheader("Host", parsed.netloc)
+        connection.putheader("Content-Length", str(len(data)))
+        connection.endheaders(data)
+        response = connection.getresponse()
+        detail = response.read().decode("utf-8", errors="replace")
+        if response.status >= 400:
+            if "SignatureDoesNotMatch" in detail:
+                detail = (
+                    "OSS presigned upload signature mismatch. The upload was sent without a Content-Type header; "
+                    f"server detail: {detail}"
+                )
+            raise MinerUApiError(f"MinerU upload HTTP {response.status}: {detail}")
+    except OSError as exc:  # pragma: no cover - network path
         raise MinerUApiError(f"MinerU upload failed: {exc}") from exc
+    finally:
+        connection.close()
 
 
 def _download(url: str, output: Path, timeout: int = 300) -> None:
