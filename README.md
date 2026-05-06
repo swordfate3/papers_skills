@@ -155,7 +155,7 @@ pdftotext -layout
 
 - `standard-cloud`：高质量云 MinerU，使用 https://mineru.net/apiManage/docs 的 v4 精准解析 API，需要 Token
 - `agent-cloud`：轻量云 MinerU，使用 Agent 轻量解析 API，适合无 Token 的零配置场景
-- `local`：调用本机 `mineru` 命令
+- `local`：优先调用技能包内置的 Docker MinerU，其次才回退到本机 `mineru`
 
 如果希望使用高质量云解析，第一次先配置 Token：
 
@@ -182,6 +182,26 @@ python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --min
 ```
 
 `auto` 会按顺序选择 `MINERU_TOKEN` / 已保存 Token、本机 `mineru`、最后回退到 `agent-cloud`。
+
+如果你希望走本地高质量 MinerU，可以先检查内置 Docker MinerU 状态：
+
+```bash
+python scripts/paper_workflow.py local-mineru --status
+```
+
+如果尚未启用，技能在工作流里应先询问用户“是否要启用本地 Docker MinerU”。用户确认后，再帮助执行：
+
+```bash
+python scripts/paper_workflow.py local-mineru --enable
+```
+
+启用后即可直接使用：
+
+```bash
+python scripts/paper_workflow.py ingest /path/to/paper.pdf --prefer-mineru --mineru-backend local
+```
+
+`auto` 会按顺序选择 `MINERU_TOKEN` / 已保存 Token、内置 Docker MinerU 或本机 `mineru`、最后回退到 `agent-cloud`。
 
 云 MinerU 默认不使用系统代理环境变量，避免错误代理导致 `mineru.net` 解析或连接失败。如果确实需要代理，显式设置：
 

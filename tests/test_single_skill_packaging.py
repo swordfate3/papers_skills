@@ -16,6 +16,7 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "scripts/extract_pdf.py",
         "scripts/mineru_cloud.py",
         "scripts/mineru_to_md.sh",
+        "scripts/mineru_local_docker.sh",
         "schemas/paper-memory.schema.json",
         "templates/paper-memory.json",
         "references/pdf-processing.md",

@@ -93,6 +93,18 @@ def test_skill_docs_no_longer_depend_on_custom_mineru_wrapper():
         assert "custom" not in text or "custom or" not in text
 
 
+def test_skill_docs_describe_bundled_local_docker_mineru_flow():
+    for relative in [
+        "README.md",
+        "skills/paper-research-workflow/SKILL.md",
+        "skills/paper-research-workflow/references/mineru-local.md",
+        "docs/论文研究技能可视化工作流.md",
+    ]:
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "Docker MinerU" in text
+        assert "是否要启用" in text or "enable it" in text
+
+
 def test_reading_workflows_support_iterative_refinement():
     for relative in [
         "references/child-skills/paper-plain-explainer.md",

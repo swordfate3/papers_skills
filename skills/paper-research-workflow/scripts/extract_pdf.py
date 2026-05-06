@@ -95,6 +95,31 @@ def default_mineru_wrapper() -> Path:
     return Path(__file__).resolve().with_name("mineru_to_md.sh")
 
 
+def default_local_mineru_wrapper() -> Path:
+    return Path(__file__).resolve().with_name("mineru_local_docker.sh")
+
+
+def _docker_mineru_image() -> str:
+    return os.environ.get("MINERU_IMAGE", "mineru:latest")
+
+
+def _docker_mineru_ready() -> bool:
+    docker = shutil.which("docker")
+    if not docker:
+        return False
+    result = subprocess.run(
+        [docker, "image", "inspect", _docker_mineru_image()],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def local_mineru_available() -> bool:
+    return _docker_mineru_ready() or shutil.which("mineru") is not None
+
+
 def resolve_mineru_backend(backend: str = "auto") -> str:
     if backend not in {"auto", "local", "standard-cloud", "agent-cloud"}:
         raise ValueError(f"Unsupported MinerU backend: {backend}")
@@ -104,7 +129,7 @@ def resolve_mineru_backend(backend: str = "auto") -> str:
         return "standard-cloud"
     if load_mineru_config(default_mineru_config_path()).standard_token:
         return "standard-cloud"
-    if shutil.which("mineru"):
+    if local_mineru_available():
         return "local"
     return "agent-cloud"
 
@@ -167,6 +192,14 @@ def _failed_mineru_manifest(output_dir: Path, reason: str, backend: str) -> dict
     return manifest
 
 
+def _local_mineru_unavailable_reason() -> str:
+    script = Path(__file__).resolve().with_name("paper_workflow.py")
+    return (
+        "Local Docker MinerU is not enabled. Ask the user whether to enable it, "
+        f"then run: python {script} local-mineru --enable"
+    )
+
+
 def _run_mineru(pdf_path: Path, output_dir: Path, mineru_wrapper: str, backend: str = "auto") -> dict[str, Any]:
     resolved_backend = resolve_mineru_backend(backend)
     if resolved_backend == "standard-cloud":
@@ -195,6 +228,9 @@ def _run_mineru(pdf_path: Path, output_dir: Path, mineru_wrapper: str, backend: 
     wrapper = Path(mineru_wrapper)
     if not wrapper.exists():
         return _failed_mineru_manifest(output_dir, f"MinerU wrapper not found: {wrapper}", resolved_backend)
+
+    if resolved_backend == "local" and not local_mineru_available():
+        return _failed_mineru_manifest(output_dir, _local_mineru_unavailable_reason(), resolved_backend)
 
     with tempfile.TemporaryDirectory() as tmp:
         mineru_out = Path(tmp) / "mineru"

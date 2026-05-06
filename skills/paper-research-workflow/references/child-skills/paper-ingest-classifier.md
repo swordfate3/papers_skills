@@ -21,6 +21,12 @@ Use the bundled reference `references/mineru-local.md` for scanned, formula-heav
 scripts/mineru_to_md.sh <pdf> --output <dir> --backend auto
 ```
 
+For `--mineru-backend local`, prefer the bundled Docker MinerU path. If it is not enabled yet, ask the user whether to enable it first, then run:
+
+```bash
+python scripts/paper_workflow.py local-mineru --enable
+```
+
 For high-quality cloud parsing, ask the user for their MinerU token the first time and save it:
 
 ```bash

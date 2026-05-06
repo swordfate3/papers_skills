@@ -36,6 +36,12 @@ if [[ "$backend" == "standard-cloud" || "$backend" == "agent-cloud" || ( "$backe
 fi
 
 if [[ "$backend" == "local" || "$backend" == "auto" ]]; then
+  local_wrapper="$(dirname "$0")/mineru_local_docker.sh"
+  if [[ -x "$local_wrapper" ]]; then
+    if "$local_wrapper" status >/dev/null 2>&1; then
+      exec "$local_wrapper" run "$input" --output "$output"
+    fi
+  fi
   if command -v mineru >/dev/null 2>&1; then
     exec mineru -p "$input" -o "$output"
   fi
@@ -45,5 +51,5 @@ if [[ "$backend" == "auto" ]]; then
   exec python "$(dirname "$0")/mineru_cloud_cli.py" "$input" --output "$output" --backend agent-cloud
 fi
 
-echo "No MinerU backend found. Configure MINERU_TOKEN, use --backend agent-cloud, or install mineru on PATH." >&2
+echo "No MinerU backend found. Configure MINERU_TOKEN, use --backend agent-cloud, install mineru on PATH, or enable local Docker MinerU with python $(dirname "$0")/paper_workflow.py local-mineru --enable ." >&2
 exit 127

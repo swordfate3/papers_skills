@@ -65,6 +65,30 @@ If the user does not want to configure a token, use `--mineru-backend agent-clou
 
 Cloud MinerU requests default to direct connections and ignore system proxy environment variables. Use `MINERU_USE_PROXY=1` only if the user explicitly asks to route MinerU through a proxy.
 
+## Local Docker MinerU Rule
+
+This skill bundles its own local Docker MinerU entry and should reuse it for `--mineru-backend local`. Do not depend on another installed MinerU skill.
+
+Check status with:
+
+```bash
+python scripts/paper_workflow.py local-mineru --status
+```
+
+If local Docker MinerU is not enabled yet and the user wants local high-quality parsing, ask whether to enable it first. After the user confirms, run:
+
+```bash
+python scripts/paper_workflow.py local-mineru --enable
+```
+
+Then use:
+
+```bash
+python scripts/paper_workflow.py ingest <pdf> --prefer-mineru --mineru-backend local
+```
+
+`auto` prefers configured high-quality cloud token, then local Docker MinerU or local `mineru`, then lightweight `agent-cloud`.
+
 ## Shared Contracts
 
 Use `scripts/paper_workflow.py` for setup, status, validation, query, and deterministic state updates.

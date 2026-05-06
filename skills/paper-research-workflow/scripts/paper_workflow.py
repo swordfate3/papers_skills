@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import shutil
 from pathlib import Path
 from typing import Any
@@ -110,6 +111,10 @@ def _suite_root() -> Path:
     return _repo_root() / "shared"
 
 
+def _local_mineru_script() -> Path:
+    return Path(__file__).resolve().with_name("mineru_local_docker.sh")
+
+
 def _template_memory() -> dict[str, Any]:
     return read_json(_suite_root() / "templates/paper-memory.json")
 
@@ -206,6 +211,48 @@ def query_workspace(workspace: Path, paper_id: str, limit: int = 10) -> list[dic
     return rank_related_papers(target, memories, limit)
 
 
+def local_mineru_status() -> dict[str, Any]:
+    script = _local_mineru_script()
+    if not script.exists():
+        return {"available": False, "reason": f"missing script: {script}"}
+
+    result = subprocess.run(
+        [str(script), "status"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    payload: dict[str, Any]
+    try:
+        payload = json.loads(result.stdout) if result.stdout.strip() else {}
+    except json.JSONDecodeError:
+        payload = {"raw_stdout": result.stdout.strip()}
+    payload["available"] = result.returncode == 0
+    if result.stderr.strip():
+        payload["stderr"] = result.stderr.strip()
+    return payload
+
+
+def enable_local_mineru() -> dict[str, Any]:
+    script = _local_mineru_script()
+    if not script.exists():
+        raise FileNotFoundError(script)
+
+    result = subprocess.run(
+        [str(script), "enable"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    payload = {
+        "ok": result.returncode == 0,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+        "command": f"{script} enable",
+    }
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Paper research workflow helper.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -239,6 +286,10 @@ def main() -> int:
         choices=["auto", "local", "standard-cloud", "agent-cloud"],
         default="auto",
     )
+
+    local_mineru_parser = subparsers.add_parser("local-mineru")
+    local_mineru_parser.add_argument("--status", action="store_true")
+    local_mineru_parser.add_argument("--enable", action="store_true")
 
     args = parser.parse_args()
 
@@ -284,6 +335,13 @@ def main() -> int:
                 indent=2,
             )
         )
+        return 0
+    if args.command == "local-mineru":
+        if args.enable:
+            result = enable_local_mineru()
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result["ok"] else 1
+        print(json.dumps(local_mineru_status(), ensure_ascii=False, indent=2))
         return 0
     return 1
 

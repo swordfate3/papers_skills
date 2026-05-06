@@ -9,6 +9,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 from extract_pdf import (  # noqa: E402
     ExtractionMetrics,
     choose_extraction_strategy,
+    local_mineru_available,
     normalize_mineru_outputs,
     resolve_mineru_backend,
 )
@@ -72,6 +73,33 @@ def test_auto_backend_prefers_local_before_agent_cloud(monkeypatch):
     monkeypatch.delenv("MINERU_TO_MD", raising=False)
     monkeypatch.delenv("MINERU_TOKEN", raising=False)
     monkeypatch.setattr(extract_pdf, "load_mineru_config", lambda path: type("Cfg", (), {"standard_token": ""})())
-    monkeypatch.setattr(extract_pdf.shutil, "which", lambda name: "/usr/bin/mineru" if name == "mineru" else None)
+    monkeypatch.setattr(extract_pdf, "local_mineru_available", lambda: True)
 
     assert resolve_mineru_backend("auto") == "local"
+
+
+def test_local_mineru_available_when_docker_image_exists(monkeypatch):
+    import extract_pdf
+
+    monkeypatch.setattr(extract_pdf, "_docker_mineru_ready", lambda: True)
+    monkeypatch.setattr(extract_pdf.shutil, "which", lambda name: None)
+
+    assert local_mineru_available() is True
+
+
+def test_local_mineru_available_when_binary_exists(monkeypatch):
+    import extract_pdf
+
+    monkeypatch.setattr(extract_pdf, "_docker_mineru_ready", lambda: False)
+    monkeypatch.setattr(extract_pdf.shutil, "which", lambda name: "/usr/bin/mineru" if name == "mineru" else None)
+
+    assert local_mineru_available() is True
+
+
+def test_local_mineru_unavailable_without_docker_or_binary(monkeypatch):
+    import extract_pdf
+
+    monkeypatch.setattr(extract_pdf, "_docker_mineru_ready", lambda: False)
+    monkeypatch.setattr(extract_pdf.shutil, "which", lambda name: None)
+
+    assert local_mineru_available() is False
