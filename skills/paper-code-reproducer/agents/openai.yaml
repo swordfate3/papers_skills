@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Code Reproducer"
+  short_description: "Plan paper code reproduction"
+  default_prompt: "Use $paper-code-reproducer to create a reproduction plan for this paper."

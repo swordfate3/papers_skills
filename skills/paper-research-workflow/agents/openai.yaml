@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Research Workflow"
+  short_description: "Orchestrate paper reading workflows"
+  default_prompt: "Use $paper-research-workflow to read a local paper through the full research workflow."
