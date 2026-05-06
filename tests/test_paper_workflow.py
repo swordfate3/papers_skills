@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from skills.paper_research_workflow_imports import SCRIPTS_DIR
 
@@ -9,7 +10,9 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from paper_workflow import (  # noqa: E402
+    enable_local_mineru,
     load_default_workspace,
+    local_mineru_status,
     save_default_workspace,
     setup_workspace,
     update_state,
@@ -48,3 +51,66 @@ def test_save_and_load_default_workspace(tmp_path):
     workspace = tmp_path / "paper-library"
     save_default_workspace(workspace, config)
     assert load_default_workspace(config) == workspace.resolve()
+
+
+def test_local_mineru_status_marks_available_when_script_reports_ready(monkeypatch):
+    import paper_workflow
+
+    class Result:
+        returncode = 0
+        stdout = '{"docker_installed": true, "docker_daemon_running": true, "image_ready": true}'
+        stderr = ""
+
+    monkeypatch.setattr(paper_workflow.subprocess, "run", lambda *args, **kwargs: Result())
+
+    status = local_mineru_status()
+    assert status["available"] is True
+    assert status["image_ready"] is True
+
+
+def test_local_mineru_status_marks_unavailable_when_script_reports_not_ready(monkeypatch):
+    import paper_workflow
+
+    class Result:
+        returncode = 1
+        stdout = '{"docker_installed": true, "docker_daemon_running": false, "image_ready": false}'
+        stderr = ""
+
+    monkeypatch.setattr(paper_workflow.subprocess, "run", lambda *args, **kwargs: Result())
+
+    status = local_mineru_status()
+    assert status["available"] is False
+    assert status["docker_daemon_running"] is False
+
+
+def test_enable_local_mineru_passes_through_optional_sources(monkeypatch):
+    import paper_workflow
+
+    calls = []
+
+    class Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return Result()
+
+    monkeypatch.setattr(paper_workflow.subprocess, "run", fake_run)
+
+    result = enable_local_mineru(
+        docker_dir=Path("/tmp/mineru"),
+        dockerfile_url="https://example.com/Dockerfile",
+        image="mineru:test",
+    )
+
+    assert result["ok"] is True
+    assert calls[0][-6:] == [
+        "--docker-dir",
+        "/tmp/mineru",
+        "--dockerfile-url",
+        "https://example.com/Dockerfile",
+        "--image",
+        "mineru:test",
+    ]

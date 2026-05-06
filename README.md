@@ -195,6 +195,13 @@ python scripts/paper_workflow.py local-mineru --status
 python scripts/paper_workflow.py local-mineru --enable
 ```
 
+如果用户机器上没有现成的 MinerU Docker 目录，还可以显式指定构建目录，或者让脚本下载官方 Dockerfile 再构建：
+
+```bash
+python scripts/paper_workflow.py local-mineru --enable --docker-dir /path/to/mineru-docker
+python scripts/paper_workflow.py local-mineru --enable --docker-dir /tmp/mineru-build --dockerfile-url https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/global/Dockerfile
+```
+
 启用后即可直接使用：
 
 ```bash

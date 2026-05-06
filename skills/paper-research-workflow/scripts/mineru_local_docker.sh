@@ -3,6 +3,7 @@ set -euo pipefail
 
 DEFAULT_IMAGE="${MINERU_IMAGE:-mineru:latest}"
 DEFAULT_DOCKER_DIR="${MINERU_DOCKER_DIR:-$HOME/docker_files/mineru}"
+DEFAULT_DOCKERFILE_URL="${MINERU_DOCKERFILE_URL:-https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/global/Dockerfile}"
 
 usage() {
   cat <<'USAGE'
@@ -15,6 +16,7 @@ Commands:
 
   enable [--image IMAGE] [--docker-dir DIR]
       Build the MinerU Docker image locally.
+      If DIR is missing, the script can download a Dockerfile from --dockerfile-url.
 
   run [options] <input-file-or-directory>
       Convert a local file with the built MinerU Docker image.
@@ -23,6 +25,7 @@ Run options:
   -o, --output DIR
   --image IMAGE
   --docker-dir DIR
+  --dockerfile-url URL
   --no-build
   --no-gpu
   --dry-run
@@ -90,25 +93,37 @@ docker_image_ready() {
 print_status() {
   local image="$1"
   if ! command -v docker >/dev/null 2>&1; then
-    printf '{\n  "docker_installed": false,\n  "image_ready": false,\n  "image": "%s"\n}\n' "$image"
+    printf '{\n  "docker_installed": false,\n  "docker_daemon_running": false,\n  "image_ready": false,\n  "image": "%s"\n}\n' "$image"
+    return 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    printf '{\n  "docker_installed": true,\n  "docker_daemon_running": false,\n  "image_ready": false,\n  "image": "%s"\n}\n' "$image"
     return 1
   fi
 
   if docker_image_ready "$image"; then
-    printf '{\n  "docker_installed": true,\n  "image_ready": true,\n  "image": "%s"\n}\n' "$image"
+    printf '{\n  "docker_installed": true,\n  "docker_daemon_running": true,\n  "image_ready": true,\n  "image": "%s"\n}\n' "$image"
     return 0
   fi
 
-  printf '{\n  "docker_installed": true,\n  "image_ready": false,\n  "image": "%s"\n}\n' "$image"
+  printf '{\n  "docker_installed": true,\n  "docker_daemon_running": true,\n  "image_ready": false,\n  "image": "%s"\n}\n' "$image"
   return 1
 }
 
 build_image() {
   local image="$1"
   local docker_dir="$2"
+  local dockerfile_url="$3"
 
   command -v docker >/dev/null 2>&1 || die "docker command not found"
-  [[ -f "$docker_dir/Dockerfile" ]] || die "Dockerfile not found: $docker_dir/Dockerfile"
+  docker info >/dev/null 2>&1 || die "docker daemon is not running"
+
+  if [[ ! -f "$docker_dir/Dockerfile" ]]; then
+    mkdir -p "$docker_dir"
+    command -v curl >/dev/null 2>&1 || die "curl command not found"
+    curl -fsSL "$dockerfile_url" -o "$docker_dir/Dockerfile"
+  fi
 
   docker build -t "$image" "$docker_dir"
 }
@@ -116,6 +131,7 @@ build_image() {
 run_conversion() {
   local image="$DEFAULT_IMAGE"
   local docker_dir="$DEFAULT_DOCKER_DIR"
+  local dockerfile_url="$DEFAULT_DOCKERFILE_URL"
   local output_dir=""
   local input_path=""
   local should_build=0
@@ -146,6 +162,11 @@ run_conversion() {
       --docker-dir)
         [[ $# -ge 2 ]] || die "$1 requires a value"
         docker_dir="$2"
+        shift 2
+        ;;
+      --dockerfile-url)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        dockerfile_url="$2"
         shift 2
         ;;
       --no-build)
@@ -251,7 +272,7 @@ run_conversion() {
 
   if ! docker_image_ready "$image"; then
     [[ "$should_build" -eq 1 ]] || die "Docker MinerU image not ready. Run status first, then ask the user whether to enable it."
-    build_image "$image" "$docker_dir"
+    build_image "$image" "$docker_dir" "$dockerfile_url"
   fi
 
   docker_cmd=(docker run --rm)
@@ -314,6 +335,7 @@ main() {
     enable)
       local image="$DEFAULT_IMAGE"
       local docker_dir="$DEFAULT_DOCKER_DIR"
+      local dockerfile_url="$DEFAULT_DOCKERFILE_URL"
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --image)
@@ -326,12 +348,17 @@ main() {
             docker_dir="$2"
             shift 2
             ;;
+          --dockerfile-url)
+            [[ $# -ge 2 ]] || die "$1 requires a value"
+            dockerfile_url="$2"
+            shift 2
+            ;;
           *)
             die "Unknown option for enable: $1"
             ;;
         esac
       done
-      build_image "$image" "$docker_dir"
+      build_image "$image" "$docker_dir" "$dockerfile_url"
       ;;
     run)
       run_conversion "$@"

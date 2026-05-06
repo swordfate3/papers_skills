@@ -233,13 +233,25 @@ def local_mineru_status() -> dict[str, Any]:
     return payload
 
 
-def enable_local_mineru() -> dict[str, Any]:
+def enable_local_mineru(
+    docker_dir: Path | None = None,
+    dockerfile_url: str | None = None,
+    image: str | None = None,
+) -> dict[str, Any]:
     script = _local_mineru_script()
     if not script.exists():
         raise FileNotFoundError(script)
 
+    command = [str(script), "enable"]
+    if docker_dir is not None:
+        command.extend(["--docker-dir", str(docker_dir)])
+    if dockerfile_url:
+        command.extend(["--dockerfile-url", dockerfile_url])
+    if image:
+        command.extend(["--image", image])
+
     result = subprocess.run(
-        [str(script), "enable"],
+        command,
         check=False,
         capture_output=True,
         text=True,
@@ -248,7 +260,7 @@ def enable_local_mineru() -> dict[str, Any]:
         "ok": result.returncode == 0,
         "stdout": result.stdout.strip(),
         "stderr": result.stderr.strip(),
-        "command": f"{script} enable",
+        "command": " ".join(command),
     }
     return payload
 
@@ -290,6 +302,9 @@ def main() -> int:
     local_mineru_parser = subparsers.add_parser("local-mineru")
     local_mineru_parser.add_argument("--status", action="store_true")
     local_mineru_parser.add_argument("--enable", action="store_true")
+    local_mineru_parser.add_argument("--docker-dir", type=Path, default=None)
+    local_mineru_parser.add_argument("--dockerfile-url", default=None)
+    local_mineru_parser.add_argument("--image", default=None)
 
     args = parser.parse_args()
 
@@ -338,7 +353,11 @@ def main() -> int:
         return 0
     if args.command == "local-mineru":
         if args.enable:
-            result = enable_local_mineru()
+            result = enable_local_mineru(
+                docker_dir=args.docker_dir,
+                dockerfile_url=args.dockerfile_url,
+                image=args.image,
+            )
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0 if result["ok"] else 1
         print(json.dumps(local_mineru_status(), ensure_ascii=False, indent=2))

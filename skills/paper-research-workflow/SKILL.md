@@ -81,6 +81,8 @@ If local Docker MinerU is not enabled yet and the user wants local high-quality 
 python scripts/paper_workflow.py local-mineru --enable
 ```
 
+If the user does not already have a prepared MinerU Docker directory, this command may also be called with `--docker-dir <dir>` and optionally `--dockerfile-url <url>` so the skill can build from a local or official Dockerfile source.
+
 Then use:
 
 ```bash

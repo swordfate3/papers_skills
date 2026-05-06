@@ -44,6 +44,15 @@ python scripts/paper_workflow.py local-mineru --enable
 python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backend local
 ```
 
+If the user does not already have a prepared MinerU Docker build directory, the enable command also supports:
+
+```bash
+python scripts/paper_workflow.py local-mineru --enable --docker-dir /path/to/mineru-docker
+python scripts/paper_workflow.py local-mineru --enable --docker-dir /tmp/mineru-build --dockerfile-url https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/global/Dockerfile
+```
+
+The local status output distinguishes three cases: Docker not installed, Docker installed but daemon not running, and Docker available but MinerU image not built yet.
+
 Cloud MinerU requests ignore system proxy environment variables by default. Set `MINERU_USE_PROXY=1` only when the user explicitly wants MinerU requests to use their system proxy.
 
 For MinerU standard-cloud uploads, the bundled client sends the PDF to the OSS presigned URL without adding extra `Content-Type` headers. Do not add upload headers unless MinerU returns a presigned URL that explicitly requires them, otherwise OSS may return `SignatureDoesNotMatch`.
