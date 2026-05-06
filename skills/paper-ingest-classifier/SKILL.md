@@ -11,15 +11,17 @@ Accept a local PDF path or a PDF placed under `workspace/inbox/`. Version 1 does
 
 ## Extraction Strategy
 
-Use `.agents/skills/pdf` patterns for normal text-based PDFs: `pdftotext -layout`, `pypdf`, or `pdfplumber`.
+This skill must be portable. Do not assume other agent skills are installed on the user's machine.
 
-Use `.agents/skills/mineru-doc-to-md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. Prefer its wrapper:
+Use the bundled reference `shared/references/pdf-processing.md` for normal text-based PDFs. The implementation entry is `shared/scripts/extract_pdf.py`, which tries `pdftotext -layout` and then `pypdf` when available.
+
+Use the bundled reference `shared/references/mineru-local.md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs. The portable MinerU adapter is:
 
 ```bash
-/home/fate/.agents/skills/mineru-doc-to-md/scripts/mineru_to_md.sh <pdf> --output <dir>
+shared/scripts/mineru_to_md.sh <pdf> --output <dir>
 ```
 
-Treat `.agents/skills/mineru` API guidance as optional reference only. Do not make online MinerU API calls by default.
+If a user has an existing MinerU wrapper, they can set `MINERU_TO_MD=/path/to/wrapper`. Online MinerU APIs are not used by default.
 
 The shared implementation entry is:
 

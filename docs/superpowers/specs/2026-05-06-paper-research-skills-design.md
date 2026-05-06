@@ -195,11 +195,11 @@ The orchestration skill routes user requests and runs the complete or partial wo
 
 ### paper-ingest-classifier
 
-This skill handles local PDF reading and classification. It depends on existing PDF skills:
+This skill handles local PDF reading and classification. Its PDF handling must be bundled with this suite so the skill package works on machines that do not have the author's personal skill directory.
 
-- Use `.agents/skills/pdf` patterns for normal text-based PDFs: `pdftotext -layout`, `pypdf`, or `pdfplumber`.
-- Use `.agents/skills/mineru-doc-to-md` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs.
-- Treat `.agents/skills/mineru` API instructions as optional reference only, not the default path.
+- Use `shared/references/pdf-processing.md` and `shared/scripts/extract_pdf.py` for normal text-based PDFs: `pdftotext -layout` first, then `pypdf` when available.
+- Use `shared/references/mineru-local.md` and `shared/scripts/mineru_to_md.sh` for scanned, formula-heavy, table-heavy, multi-column, or complex layout PDFs.
+- Allow users to set `MINERU_TO_MD=/path/to/wrapper` when they already have a local MinerU wrapper. Do not make online MinerU API calls by default.
 
 It writes normalized extraction outputs under `workspace/extracted/<paper-id>/` and updates the initial paper memory fields.
 

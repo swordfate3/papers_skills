@@ -24,7 +24,7 @@
 - Create `shared/schemas/*.schema.json`: schema files for paper memory, paper card metadata, reproduction plan metadata, and innovation brief metadata.
 - Create `shared/scripts/paper_research_common.py`: shared filesystem, JSON, slug, hash, and memory helpers.
 - Create `shared/scripts/validate_memory.py`: validate paper memory files against schema.
-- Create `shared/scripts/extract_pdf.py`: lightweight extraction, extraction metrics, and MinerU fallback routing.
+- Create `shared/scripts/extract_pdf.py`: lightweight extraction, extraction metrics, and portable MinerU fallback routing.
 - Create `shared/scripts/classify_paper.py`: metadata and domain classification heuristics.
 - Create `shared/scripts/kb_query.py`: file-based knowledge-base search.
 - Create `shared/scripts/paper_workflow.py`: unified CLI for setup, ingest, validate, query, and status.
@@ -520,7 +520,7 @@ Create `shared/scripts/extract_pdf.py` with:
 - `choose_extraction_strategy(metrics) -> str`: return `mineru` when `chars < max(1000, pages * 400)`, `formula_markers >= 50`, or `table_markers >= 20`; otherwise return `lightweight`.
 - `normalize_mineru_outputs(mineru_output_dir, output_dir) -> dict`: copy the best Markdown file to `text.md`, create empty `tables.md`, `equations.md`, and `figures.md` if missing, write `manifest.json`, and return the manifest.
 - `extract_lightweight(pdf_path, output_dir) -> dict`: call `pdftotext -layout` when available, otherwise try `pypdf` if installed, write `text.md`, empty companion files for tables/equations/figures, and a manifest.
-- `extract_pdf(pdf_path, output_dir, prefer_mineru=False, mineru_wrapper="/home/fate/.agents/skills/mineru-doc-to-md/scripts/mineru_to_md.sh") -> dict`: run lightweight first unless `prefer_mineru`, then route to MinerU when needed. If MinerU is needed but unavailable, write a manifest with `status: failed` and a clear reason.
+- `extract_pdf(pdf_path, output_dir, prefer_mineru=False, mineru_wrapper=None) -> dict`: run lightweight first unless `prefer_mineru`, then route to the bundled MinerU adapter when needed. If MinerU is needed but unavailable, write a manifest with `status: failed` and a clear reason.
 - CLI arguments: `pdf`, `--output`, `--prefer-mineru`, `--no-mineru`.
 
 - [ ] **Step 4: Run tests**
@@ -786,10 +786,11 @@ def test_workflow_skill_mentions_all_child_skills_and_shared_cli():
     assert "shared/scripts/paper_workflow.py" in text
 
 
-def test_ingest_skill_mentions_pdf_and_mineru_dependencies():
+def test_ingest_skill_uses_bundled_pdf_references_not_external_skills():
     text = read_skill("paper-ingest-classifier")
-    assert ".agents/skills/pdf" in text
-    assert ".agents/skills/mineru-doc-to-md" in text
+    assert ".agents/skills/" not in text
+    assert "shared/references/pdf-processing.md" in text
+    assert "shared/references/mineru-local.md" in text
     assert "workspace/extracted/<paper-id>/" in text
 
 
@@ -850,7 +851,7 @@ For each child skill, use concise frontmatter descriptions that include concrete
 
 Specific required notes:
 
-- `paper-ingest-classifier`: mention `.agents/skills/pdf`, `.agents/skills/mineru-doc-to-md`, and optional `.agents/skills/mineru`; write `workspace/extracted/<paper-id>/manifest.json`.
+- `paper-ingest-classifier`: mention `shared/references/pdf-processing.md`, `shared/references/mineru-local.md`, and the bundled extraction scripts; write `workspace/extracted/<paper-id>/manifest.json`.
 - `paper-plain-explainer`: use `shared/templates/paper-card.md`; explain claims clearly; include terminology.
 - `paper-expert-reader`: distinguish paper claims from inference; extract assumptions, evidence quality, limitations, and innovation seeds.
 - `paper-code-reproducer`: produce reproduction plan, not full implementation by default.

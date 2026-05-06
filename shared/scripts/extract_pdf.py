@@ -74,6 +74,10 @@ def normalize_mineru_outputs(mineru_output_dir: Path, output_dir: Path) -> dict[
     return manifest
 
 
+def default_mineru_wrapper() -> Path:
+    return Path(__file__).resolve().with_name("mineru_to_md.sh")
+
+
 def extract_lightweight(pdf_path: Path, output_dir: Path) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     text = ""
@@ -155,12 +159,12 @@ def extract_pdf(
     output_dir: Path,
     prefer_mineru: bool = False,
     no_mineru: bool = False,
-    mineru_wrapper: str = "/home/fate/.agents/skills/mineru-doc-to-md/scripts/mineru_to_md.sh",
+    mineru_wrapper: str | None = None,
 ) -> dict[str, Any]:
     if prefer_mineru:
         if no_mineru:
             raise ValueError("prefer_mineru and no_mineru cannot both be true")
-        return _run_mineru(pdf_path, output_dir, mineru_wrapper)
+        return _run_mineru(pdf_path, output_dir, str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()))
 
     manifest = extract_lightweight(pdf_path, output_dir)
     if no_mineru or manifest.get("status") != "ok":
@@ -170,7 +174,7 @@ def extract_pdf(
     strategy = choose_extraction_strategy(ExtractionMetrics(**metrics))
     if strategy == "lightweight":
         return manifest
-    return _run_mineru(pdf_path, output_dir, mineru_wrapper)
+    return _run_mineru(pdf_path, output_dir, str(Path(mineru_wrapper) if mineru_wrapper else default_mineru_wrapper()))
 
 
 def main() -> int:
@@ -181,7 +185,7 @@ def main() -> int:
     parser.add_argument("--no-mineru", action="store_true")
     parser.add_argument(
         "--mineru-wrapper",
-        default="/home/fate/.agents/skills/mineru-doc-to-md/scripts/mineru_to_md.sh",
+        default=None,
     )
     args = parser.parse_args()
 

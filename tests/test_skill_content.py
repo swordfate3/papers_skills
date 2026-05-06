@@ -22,10 +22,11 @@ def test_workflow_skill_mentions_all_child_skills_and_shared_cli():
     assert "shared/scripts/paper_workflow.py" in text
 
 
-def test_ingest_skill_mentions_pdf_and_mineru_dependencies():
+def test_ingest_skill_uses_bundled_pdf_references_not_external_skills():
     text = read_skill("paper-ingest-classifier")
-    assert ".agents/skills/pdf" in text
-    assert ".agents/skills/mineru-doc-to-md" in text
+    assert ".agents/skills/" not in text
+    assert "shared/references/pdf-processing.md" in text
+    assert "shared/references/mineru-local.md" in text
     assert "workspace/extracted/<paper-id>/" in text
 
 
