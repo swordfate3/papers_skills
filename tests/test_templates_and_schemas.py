@@ -57,7 +57,7 @@ def test_markdown_templates_have_frontmatter_and_required_sections():
         "paper-card.md": ["一句话总结", "核心问题", "方法", "证据", "局限性", "术语对照"],
         "expert-reading.md": ["专家结论", "技术机制", "证据质量", "局限与失败模式", "创新启发"],
         "reproduction-plan.md": ["复现目标", "最小可行复现", "依赖与数据", "实验与指标", "风险"],
-        "innovation-brief.md": ["来源论文", "创新假设", "最小实验", "风险与证伪"],
+        "innovation-brief.md": ["来源论文", "创新假设", "最小实验", "风险与证伪", "创新评分", "排序说明"],
     }
     for filename, sections in required.items():
         text = (ROOT / "skills/paper-research-workflow/templates" / filename).read_text(encoding="utf-8")

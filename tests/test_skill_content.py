@@ -79,3 +79,27 @@ def test_output_workflows_follow_selected_language():
         text = (ROOT / "skills/paper-research-workflow" / relative).read_text(encoding="utf-8")
         assert "selected language" in text
         assert "default Chinese" in text
+
+
+def test_reading_workflows_support_iterative_refinement():
+    for relative in [
+        "references/child-skills/paper-plain-explainer.md",
+        "references/child-skills/paper-expert-reader.md",
+        "references/child-skills/paper-code-reproducer.md",
+    ]:
+        text = (ROOT / "skills/paper-research-workflow" / relative).read_text(encoding="utf-8")
+        assert "not satisfied" in text
+        assert "refine" in text
+        assert "overwrite" in text
+        assert "new version" in text
+
+
+def test_innovation_workflow_requires_ranked_append_only_storage():
+    text = (ROOT / "skills/paper-research-workflow/references/child-skills/paper-innovation-miner.md").read_text(
+        encoding="utf-8"
+    )
+    assert "score" in text
+    assert "rank" in text
+    assert "highest to lowest" in text
+    assert "must not overwrite" in text
+    assert "append" in text

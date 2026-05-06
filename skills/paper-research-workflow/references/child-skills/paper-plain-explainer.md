@@ -33,6 +33,10 @@ Update `workspace/knowledge/papers/<paper-id>.json`:
 - `artifacts.plain_explanation`
 - `status.explained`
 
+If the user is not satisfied and asks for a more detailed or clearer explanation, refine the explanation again rather than stopping after one pass. Support iterative refinement until the user is satisfied.
+
+Before replacing an existing `workspace/knowledge/cards/<paper-id>.md`, ask whether to `overwrite` the current card or save a `new version`. Recommended default: keep the current card and save a new version when the user is exploring multiple explanation depths.
+
 ## Style
 
 Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the paper card in English while keeping recognizable paper terms in their original language. If the user switches back to Chinese mode, resume Chinese output.

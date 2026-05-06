@@ -42,6 +42,10 @@ Update `workspace/knowledge/papers/<paper-id>.json`:
 - `artifacts.expert_reading`
 - `status.expert_read`
 
+If the user is not satisfied and asks for deeper analysis, stronger critique, more examples, or more detailed mechanism tracing, refine the expert reading again rather than stopping after one pass. Support iterative refinement until the user is satisfied.
+
+Before replacing an existing `workspace/knowledge/expert-readings/<paper-id>.md`, ask whether to `overwrite` the current report or save a `new version`. Recommended default: keep the current report and save a new version when the user is comparing different analysis depth or focus.
+
 ## Reading Standard
 
 Write in the selected language from the orchestrator; default Chinese. If the user switches to English mode, write the expert reading in English while keeping recognizable paper terms in their original language. If the user switches back to Chinese mode, resume Chinese output.

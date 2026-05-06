@@ -35,6 +35,10 @@ Update `workspace/knowledge/papers/<paper-id>.json`:
 - `artifacts.reproduction_plan`
 - `status.reproduction_planned`
 
+If the user is not satisfied and asks for a more detailed reproduction path, lower-level implementation breakdown, clearer dependency analysis, or stronger risk analysis, refine the reproduction plan again rather than stopping after one pass. Support iterative refinement until the user is satisfied.
+
+Before replacing an existing `workspace/knowledge/reproductions/<paper-id>.md`, ask whether to `overwrite` the current plan or save a `new version`. Recommended default: keep the current plan and save a new version when the user is comparing fast MVP versus full reproduction paths.
+
 ## Default Behavior
 
 Produce a reproduction plan, not a full implementation, unless the user explicitly asks to write code. When implementing code, start a normal coding workflow in the target repository and follow its tests, dependencies, and style.

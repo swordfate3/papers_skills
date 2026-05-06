@@ -33,7 +33,9 @@ Use `templates/innovation-brief.md` and write:
 workspace/knowledge/innovations/<innovation-id>.md
 ```
 
-Update `workspace/knowledge/papers/<paper-id>.json` when a target paper gains durable related-paper links or innovation seeds.
+Update `workspace/knowledge/papers/<paper-id>.json` when a target paper gains durable related-paper links, innovation seeds, or ranked innovation candidates.
+
+If the user asks for innovation ideas across multiple papers, generate a ranked list of reasonable innovation directions and sort them from highest to lowest score.
 
 ## Innovation Brief Standard
 
@@ -41,7 +43,11 @@ Write in the selected language from the orchestrator; default Chinese. If the us
 
 Include source papers, shared problem or tension, complementary mechanisms, concrete hypothesis, why it might work, minimum experiment, risks, and falsification conditions.
 
+For each candidate direction, include a `score` that reflects overall reasonableness or fit, and a `rank` from highest to lowest. Explain the scoring basis briefly so the ranking is auditable.
+
 Do not claim verified novelty. State that the output is an ideation artifact and still needs literature search.
+
+Innovation storage must not overwrite earlier innovation results. Append each new ranked innovation result into the knowledge base and preserve prior innovation entries so later innovation mining can compare or accumulate earlier ideas. Use append-only storage for innovation ranking history.
 
 ## Shared Contracts
 
