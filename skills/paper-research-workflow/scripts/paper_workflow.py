@@ -236,6 +236,8 @@ def local_mineru_status() -> dict[str, Any]:
 def enable_local_mineru(
     docker_dir: Path | None = None,
     dockerfile_url: str | None = None,
+    source_archive_url: str | None = None,
+    source_subdir: str | None = None,
     image: str | None = None,
 ) -> dict[str, Any]:
     script = _local_mineru_script()
@@ -247,6 +249,10 @@ def enable_local_mineru(
         command.extend(["--docker-dir", str(docker_dir)])
     if dockerfile_url:
         command.extend(["--dockerfile-url", dockerfile_url])
+    if source_archive_url:
+        command.extend(["--source-archive-url", source_archive_url])
+    if source_subdir:
+        command.extend(["--source-subdir", source_subdir])
     if image:
         command.extend(["--image", image])
 
@@ -304,6 +310,8 @@ def main() -> int:
     local_mineru_parser.add_argument("--enable", action="store_true")
     local_mineru_parser.add_argument("--docker-dir", type=Path, default=None)
     local_mineru_parser.add_argument("--dockerfile-url", default=None)
+    local_mineru_parser.add_argument("--source-archive-url", default=None)
+    local_mineru_parser.add_argument("--source-subdir", default=None)
     local_mineru_parser.add_argument("--image", default=None)
 
     args = parser.parse_args()
@@ -356,6 +364,8 @@ def main() -> int:
             result = enable_local_mineru(
                 docker_dir=args.docker_dir,
                 dockerfile_url=args.dockerfile_url,
+                source_archive_url=args.source_archive_url,
+                source_subdir=args.source_subdir,
                 image=args.image,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -44,12 +44,14 @@ python scripts/paper_workflow.py local-mineru --enable
 python scripts/paper_workflow.py ingest paper.pdf --prefer-mineru --mineru-backend local
 ```
 
-If the user does not already have a prepared MinerU Docker build directory, the enable command also supports:
+If the user does not already have a prepared MinerU Docker build directory, the enable command also supports preparing a full official build context automatically:
 
 ```bash
 python scripts/paper_workflow.py local-mineru --enable --docker-dir /path/to/mineru-docker
-python scripts/paper_workflow.py local-mineru --enable --docker-dir /tmp/mineru-build --dockerfile-url https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/global/Dockerfile
+python scripts/paper_workflow.py local-mineru --enable --docker-dir /tmp/mineru-build --source-archive-url https://github.com/opendatalab/MinerU/archive/refs/heads/master.tar.gz --source-subdir docker/global
 ```
+
+Use `--dockerfile-url` only as a fallback when a full source archive is unavailable.
 
 The local status output distinguishes three cases: Docker not installed, Docker installed but daemon not running, and Docker available but MinerU image not built yet.
 

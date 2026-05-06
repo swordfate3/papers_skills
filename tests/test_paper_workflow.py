@@ -102,15 +102,21 @@ def test_enable_local_mineru_passes_through_optional_sources(monkeypatch):
     result = enable_local_mineru(
         docker_dir=Path("/tmp/mineru"),
         dockerfile_url="https://example.com/Dockerfile",
+        source_archive_url="https://example.com/MinerU.tar.gz",
+        source_subdir="docker/global",
         image="mineru:test",
     )
 
     assert result["ok"] is True
-    assert calls[0][-6:] == [
+    assert calls[0][-10:] == [
         "--docker-dir",
         "/tmp/mineru",
         "--dockerfile-url",
         "https://example.com/Dockerfile",
+        "--source-archive-url",
+        "https://example.com/MinerU.tar.gz",
+        "--source-subdir",
+        "docker/global",
         "--image",
         "mineru:test",
     ]

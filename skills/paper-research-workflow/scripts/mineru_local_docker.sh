@@ -4,6 +4,8 @@ set -euo pipefail
 DEFAULT_IMAGE="${MINERU_IMAGE:-mineru:latest}"
 DEFAULT_DOCKER_DIR="${MINERU_DOCKER_DIR:-$HOME/docker_files/mineru}"
 DEFAULT_DOCKERFILE_URL="${MINERU_DOCKERFILE_URL:-https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/global/Dockerfile}"
+DEFAULT_SOURCE_ARCHIVE_URL="${MINERU_SOURCE_ARCHIVE_URL:-https://github.com/opendatalab/MinerU/archive/refs/heads/master.tar.gz}"
+DEFAULT_SOURCE_SUBDIR="${MINERU_SOURCE_SUBDIR:-docker/global}"
 
 usage() {
   cat <<'USAGE'
@@ -16,7 +18,8 @@ Commands:
 
   enable [--image IMAGE] [--docker-dir DIR]
       Build the MinerU Docker image locally.
-      If DIR is missing, the script can download a Dockerfile from --dockerfile-url.
+      If DIR is missing, the script can prepare a full build context from
+      --source-archive-url and --source-subdir, or fall back to --dockerfile-url.
 
   run [options] <input-file-or-directory>
       Convert a local file with the built MinerU Docker image.
@@ -26,6 +29,8 @@ Run options:
   --image IMAGE
   --docker-dir DIR
   --dockerfile-url URL
+  --source-archive-url URL
+  --source-subdir PATH
   --no-build
   --no-gpu
   --dry-run
@@ -86,6 +91,33 @@ abs_dir_path() {
   )
 }
 
+copy_dir_contents() {
+  local source_dir="$1"
+  local target_dir="$2"
+
+  mkdir -p "$target_dir"
+  cp -R "$source_dir"/. "$target_dir"/
+}
+
+extract_archive() {
+  local archive_path="$1"
+  local output_dir="$2"
+
+  mkdir -p "$output_dir"
+  case "$archive_path" in
+    *.tar.gz|*.tgz)
+      tar -xzf "$archive_path" -C "$output_dir"
+      ;;
+    *.zip)
+      command -v unzip >/dev/null 2>&1 || die "unzip command not found"
+      unzip -q "$archive_path" -d "$output_dir"
+      ;;
+    *)
+      die "Unsupported source archive format: $archive_path"
+      ;;
+  esac
+}
+
 docker_image_ready() {
   docker image inspect "$1" >/dev/null 2>&1
 }
@@ -115,6 +147,8 @@ build_image() {
   local image="$1"
   local docker_dir="$2"
   local dockerfile_url="$3"
+  local source_archive_url="$4"
+  local source_subdir="$5"
 
   command -v docker >/dev/null 2>&1 || die "docker command not found"
   docker info >/dev/null 2>&1 || die "docker daemon is not running"
@@ -122,7 +156,39 @@ build_image() {
   if [[ ! -f "$docker_dir/Dockerfile" ]]; then
     mkdir -p "$docker_dir"
     command -v curl >/dev/null 2>&1 || die "curl command not found"
-    curl -fsSL "$dockerfile_url" -o "$docker_dir/Dockerfile"
+
+    if [[ -n "$source_archive_url" ]]; then
+      local tmp_dir
+      tmp_dir="$(mktemp -d)"
+      trap 'rm -rf "$tmp_dir"' RETURN
+
+      local archive_ext=".tar.gz"
+      [[ "$source_archive_url" == *.zip ]] && archive_ext=".zip"
+
+      local archive_path="$tmp_dir/source$archive_ext"
+      local extracted_dir="$tmp_dir/extracted"
+
+      curl -fsSL "$source_archive_url" -o "$archive_path"
+      extract_archive "$archive_path" "$extracted_dir"
+
+      local root_dir
+      root_dir="$(find "$extracted_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+      [[ -n "$root_dir" ]] || die "No root directory found in source archive: $source_archive_url"
+
+      local source_dir="$root_dir"
+      if [[ -n "$source_subdir" ]]; then
+        source_dir="$root_dir/$source_subdir"
+      fi
+      [[ -d "$source_dir" ]] || die "Source subdir not found in archive: $source_subdir"
+
+      copy_dir_contents "$source_dir" "$docker_dir"
+      trap - RETURN
+      rm -rf "$tmp_dir"
+    fi
+
+    if [[ ! -f "$docker_dir/Dockerfile" ]]; then
+      curl -fsSL "$dockerfile_url" -o "$docker_dir/Dockerfile"
+    fi
   fi
 
   docker build -t "$image" "$docker_dir"
@@ -132,6 +198,8 @@ run_conversion() {
   local image="$DEFAULT_IMAGE"
   local docker_dir="$DEFAULT_DOCKER_DIR"
   local dockerfile_url="$DEFAULT_DOCKERFILE_URL"
+  local source_archive_url="$DEFAULT_SOURCE_ARCHIVE_URL"
+  local source_subdir="$DEFAULT_SOURCE_SUBDIR"
   local output_dir=""
   local input_path=""
   local should_build=0
@@ -167,6 +235,16 @@ run_conversion() {
       --dockerfile-url)
         [[ $# -ge 2 ]] || die "$1 requires a value"
         dockerfile_url="$2"
+        shift 2
+        ;;
+      --source-archive-url)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        source_archive_url="$2"
+        shift 2
+        ;;
+      --source-subdir)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        source_subdir="$2"
         shift 2
         ;;
       --no-build)
@@ -272,7 +350,7 @@ run_conversion() {
 
   if ! docker_image_ready "$image"; then
     [[ "$should_build" -eq 1 ]] || die "Docker MinerU image not ready. Run status first, then ask the user whether to enable it."
-    build_image "$image" "$docker_dir" "$dockerfile_url"
+    build_image "$image" "$docker_dir" "$dockerfile_url" "$source_archive_url" "$source_subdir"
   fi
 
   docker_cmd=(docker run --rm)
@@ -336,6 +414,8 @@ main() {
       local image="$DEFAULT_IMAGE"
       local docker_dir="$DEFAULT_DOCKER_DIR"
       local dockerfile_url="$DEFAULT_DOCKERFILE_URL"
+      local source_archive_url="$DEFAULT_SOURCE_ARCHIVE_URL"
+      local source_subdir="$DEFAULT_SOURCE_SUBDIR"
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --image)
@@ -353,12 +433,22 @@ main() {
             dockerfile_url="$2"
             shift 2
             ;;
+          --source-archive-url)
+            [[ $# -ge 2 ]] || die "$1 requires a value"
+            source_archive_url="$2"
+            shift 2
+            ;;
+          --source-subdir)
+            [[ $# -ge 2 ]] || die "$1 requires a value"
+            source_subdir="$2"
+            shift 2
+            ;;
           *)
             die "Unknown option for enable: $1"
             ;;
         esac
       done
-      build_image "$image" "$docker_dir" "$dockerfile_url"
+      build_image "$image" "$docker_dir" "$dockerfile_url" "$source_archive_url" "$source_subdir"
       ;;
     run)
       run_conversion "$@"
