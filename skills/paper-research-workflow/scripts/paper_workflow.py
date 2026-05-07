@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import signal
 import subprocess
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -117,6 +120,14 @@ def _local_mineru_script() -> Path:
 
 def _web_dir() -> Path:
     return _suite_root() / "web"
+
+
+def web_service_state_path() -> Path:
+    return _suite_root() / ".paper-web-service.json"
+
+
+def web_service_log_path() -> Path:
+    return _suite_root() / ".paper-web-service.log"
 
 
 def _template_memory() -> dict[str, Any]:
@@ -275,7 +286,107 @@ def enable_local_mineru(
     return payload
 
 
-def run_web_workbench(command: str = "dev") -> dict[str, Any]:
+def _process_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def web_workbench_status() -> dict[str, Any]:
+    state_path = web_service_state_path()
+    if not state_path.exists():
+        return {
+            "running": False,
+            "state_path": str(state_path),
+            "log_path": str(web_service_log_path()),
+        }
+    state = read_json(state_path)
+    pid = int(state.get("pid", 0))
+    running = bool(pid and _process_running(pid))
+    return {
+        **state,
+        "running": running,
+        "state_path": str(state_path),
+        "log_path": str(web_service_log_path()),
+    }
+
+
+def _start_web_workbench(port: int = 5173, host: str = "127.0.0.1") -> dict[str, Any]:
+    status = web_workbench_status()
+    if status.get("running"):
+        return {"ok": True, **status}
+
+    web_dir = _web_dir()
+    if not (web_dir / "package.json").exists():
+        return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
+
+    log_path = web_service_log_path()
+    log_file = log_path.open("a", encoding="utf-8")
+    command = ["npm", "run", "dev", "--", "--host", host, "--port", str(port)]
+    process = subprocess.Popen(
+        command,
+        cwd=web_dir,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    url = f"http://{host}:{port}"
+    state = {
+        "pid": process.pid,
+        "url": url,
+        "host": host,
+        "port": port,
+        "command": " ".join(command),
+        "web_dir": str(web_dir),
+        "started_at": int(time.time()),
+    }
+    write_json(web_service_state_path(), state)
+    return {"ok": True, "running": True, **state, "log_path": str(log_path)}
+
+
+def _stop_web_workbench() -> dict[str, Any]:
+    status = web_workbench_status()
+    state_path = web_service_state_path()
+    pid = int(status.get("pid", 0) or 0)
+    if status.get("running") and pid:
+        os.kill(pid, signal.SIGTERM)
+    if state_path.exists():
+        state_path.unlink()
+    return {
+        "ok": True,
+        "running": False,
+        "stopped_pid": pid or None,
+        "state_path": str(state_path),
+    }
+
+
+def _web_workbench_logs(lines: int = 80) -> dict[str, Any]:
+    log_path = web_service_log_path()
+    if not log_path.exists():
+        return {"ok": True, "log_path": str(log_path), "lines": []}
+    content = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return {"ok": True, "log_path": str(log_path), "lines": content[-lines:]}
+
+
+def run_web_workbench(
+    command: str = "dev",
+    port: int = 5173,
+    host: str = "127.0.0.1",
+    log_lines: int = 80,
+) -> dict[str, Any]:
+    if command == "start":
+        return _start_web_workbench(port=port, host=host)
+    if command == "status":
+        return {"ok": True, **web_workbench_status()}
+    if command == "stop":
+        return _stop_web_workbench()
+    if command == "logs":
+        return _web_workbench_logs(log_lines)
+
     web_dir = _web_dir()
     if not (web_dir / "package.json").exists():
         return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
@@ -331,7 +442,14 @@ def main() -> int:
     local_mineru_parser.add_argument("--image", default=None)
 
     web_parser = subparsers.add_parser("web")
-    web_parser.add_argument("--web-command", choices=["dev", "build", "test", "preview"], default="dev")
+    web_parser.add_argument(
+        "--web-command",
+        choices=["dev", "build", "test", "preview", "start", "status", "stop", "logs"],
+        default="dev",
+    )
+    web_parser.add_argument("--port", type=int, default=5173)
+    web_parser.add_argument("--host", default="127.0.0.1")
+    web_parser.add_argument("--log-lines", type=int, default=80)
 
     args = parser.parse_args()
 
@@ -392,7 +510,13 @@ def main() -> int:
         print(json.dumps(local_mineru_status(), ensure_ascii=False, indent=2))
         return 0
     if args.command == "web":
-        result = run_web_workbench(args.web_command)
+        result = run_web_workbench(
+            args.web_command,
+            port=args.port,
+            host=args.host,
+            log_lines=args.log_lines,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result["ok"] else 1
     return 1
 

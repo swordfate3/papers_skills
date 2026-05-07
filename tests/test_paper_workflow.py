@@ -14,6 +14,7 @@ from paper_workflow import (  # noqa: E402
     load_default_workspace,
     local_mineru_status,
     run_web_workbench,
+    web_workbench_status,
     save_default_workspace,
     setup_workspace,
     update_state,
@@ -123,7 +124,7 @@ def test_enable_local_mineru_passes_through_optional_sources(monkeypatch):
     ]
 
 
-def test_run_web_workbench_executes_npm_in_bundled_web_dir(monkeypatch):
+def test_run_web_workbench_executes_foreground_npm_command(monkeypatch):
     import paper_workflow
 
     calls = []
@@ -142,3 +143,54 @@ def test_run_web_workbench_executes_npm_in_bundled_web_dir(monkeypatch):
     assert result["ok"] is True
     assert calls[0][0] == ["npm", "run", "build"]
     assert calls[0][1]["cwd"].name == "web"
+
+
+def test_web_workbench_status_reports_stopped_when_no_state(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+
+    status = web_workbench_status()
+
+    assert status["running"] is False
+    assert status["state_path"] == str(state_path)
+
+
+def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    calls = []
+
+    class Process:
+        pid = 4321
+
+    def fake_popen(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return Process()
+
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+    monkeypatch.setattr(paper_workflow.subprocess, "Popen", fake_popen)
+
+    result = run_web_workbench("start", port=5179, host="127.0.0.1")
+
+    assert result["ok"] is True
+    assert result["pid"] == 4321
+    assert result["url"] == "http://127.0.0.1:5179"
+    assert calls[0][0] == ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5179"]
+    assert state_path.exists()
+
+
+def test_run_web_workbench_stop_removes_state_for_dead_process(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    state_path.write_text('{"pid": 999999, "url": "http://127.0.0.1:5179"}', encoding="utf-8")
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+
+    result = run_web_workbench("stop")
+
+    assert result["ok"] is True
+    assert result["running"] is False
+    assert not state_path.exists()

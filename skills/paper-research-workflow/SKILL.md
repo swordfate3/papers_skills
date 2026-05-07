@@ -17,6 +17,7 @@ Route natural user requests to the six internal child workflows:
 - `references/child-skills/paper-code-reproducer.md`
 - `references/child-skills/paper-knowledge-base.md`
 - `references/child-skills/paper-innovation-miner.md`
+- `references/child-skills/paper-web-workbench.md`
 
 Use this skill when the user asks to "read this paper", process a local PDF, update the paper knowledge base, prepare a reproduction plan, or find innovation ideas from stored papers.
 
@@ -126,10 +127,13 @@ The `创新挖掘` view shows ranked innovation ideas, scores, and source links 
 Run it from the installed skill directory:
 
 ```bash
-cd web
-npm install
-npm run dev
+python scripts/paper_workflow.py web --web-command start
+python scripts/paper_workflow.py web --web-command status
+python scripts/paper_workflow.py web --web-command logs
+python scripts/paper_workflow.py web --web-command stop
 ```
+
+Read `references/child-skills/paper-web-workbench.md` for Web service lifecycle and maintenance tasks.
 
 ## Routing
 
@@ -142,6 +146,7 @@ For a full paper read:
 5. Read `references/child-skills/paper-code-reproducer.md` to create the reproduction plan.
 6. Read `references/child-skills/paper-knowledge-base.md` to update and validate memory.
 7. Read `references/child-skills/paper-innovation-miner.md` only when the user asks for related papers or innovation directions.
+8. Read `references/child-skills/paper-web-workbench.md` only when the user asks to start, stop, inspect, debug, build, test, preview, or maintain the Web visualizer.
 
 For partial requests, call only the matching child skill and keep `workspace/knowledge/papers/<paper-id>.json` updated.
 

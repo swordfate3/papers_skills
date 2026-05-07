@@ -23,6 +23,7 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "references/mineru-local.md",
         "references/child-skills/paper-ingest-classifier.md",
         "references/child-skills/paper-innovation-miner.md",
+        "references/child-skills/paper-web-workbench.md",
         "web/package.json",
         "web/index.html",
         "web/src/App.tsx",

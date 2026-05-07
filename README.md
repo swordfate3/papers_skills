@@ -76,16 +76,23 @@ skills/paper-research-workflow/web/
 本地启动：
 
 ```bash
-cd skills/paper-research-workflow/web
-npm install
-npm run dev
+cd skills/paper-research-workflow
+python scripts/paper_workflow.py web --web-command start --host 127.0.0.1 --port 5173
+python scripts/paper_workflow.py web --web-command status
 ```
 
 构建验证：
 
 ```bash
-npm run test -- --run
-npm run build
+python scripts/paper_workflow.py web --web-command test
+python scripts/paper_workflow.py web --web-command build
+```
+
+服务维护：
+
+```bash
+python scripts/paper_workflow.py web --web-command logs --log-lines 120
+python scripts/paper_workflow.py web --web-command stop
 ```
 
 ## 语言模式

@@ -17,6 +17,7 @@ def test_workflow_skill_mentions_all_child_skills_and_shared_cli():
         "paper-code-reproducer",
         "paper-knowledge-base",
         "paper-innovation-miner",
+        "paper-web-workbench",
     ]:
         assert name in text
     assert "scripts/paper_workflow.py" in text
@@ -55,6 +56,7 @@ def test_child_workflow_references_are_bundled():
         "paper-code-reproducer",
         "paper-knowledge-base",
         "paper-innovation-miner",
+        "paper-web-workbench",
     ]
     for name in expected:
         assert (ROOT / "skills/paper-research-workflow/references/child-skills" / f"{name}.md").is_file()
@@ -142,3 +144,11 @@ def test_visual_workbench_documents_three_cards_and_innovation_sources():
         assert "创新挖掘" in text
         assert "Codex" in text
         assert "Claude Code" in text
+
+
+def test_web_workbench_child_skill_describes_service_lifecycle():
+    text = (ROOT / "skills/paper-research-workflow/references/child-skills/paper-web-workbench.md").read_text(
+        encoding="utf-8"
+    )
+    for word in ["start", "status", "stop", "logs", "maintenance", "python scripts/paper_workflow.py web"]:
+        assert word in text

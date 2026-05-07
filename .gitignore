@@ -6,3 +6,5 @@ workspace/
 workspace-*/
 skills/paper-research-workflow/.paper-workspace.json
 skills/paper-research-workflow/.paper-mineru.json
+skills/paper-research-workflow/.paper-web-service.json
+skills/paper-research-workflow/.paper-web-service.log
