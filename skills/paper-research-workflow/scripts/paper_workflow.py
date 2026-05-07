@@ -83,6 +83,7 @@ def setup_workspace(workspace: Path) -> None:
     state_path = workspace / "state/papers.json"
     if not state_path.exists():
         write_json(state_path, {"papers": {}})
+    release_web_workbench(workspace)
 
 
 def load_state(workspace: Path) -> dict[str, Any]:
@@ -122,12 +123,34 @@ def _web_dir() -> Path:
     return _suite_root() / "web"
 
 
-def web_service_state_path() -> Path:
-    return _suite_root() / ".paper-web-service.json"
+def web_workbench_dir(workspace: Path) -> Path:
+    return workspace / "web"
 
 
-def web_service_log_path() -> Path:
-    return _suite_root() / ".paper-web-service.log"
+def web_service_state_path(workspace: Path | None = None) -> Path:
+    base = workspace / "state" if workspace is not None else _suite_root()
+    return base / ".paper-web-service.json"
+
+
+def web_service_log_path(workspace: Path | None = None) -> Path:
+    base = workspace / "state" if workspace is not None else _suite_root()
+    return base / ".paper-web-service.log"
+
+
+def release_web_workbench(workspace: Path, overwrite: bool = False) -> Path:
+    source = _web_dir()
+    target = web_workbench_dir(workspace)
+    if not source.is_dir():
+        raise FileNotFoundError(source)
+    if target.exists() and overwrite:
+        shutil.rmtree(target)
+    if not target.exists():
+        shutil.copytree(
+            source,
+            target,
+            ignore=shutil.ignore_patterns("node_modules", "dist", ".vite"),
+        )
+    return target
 
 
 def _template_memory() -> dict[str, Any]:
@@ -296,13 +319,14 @@ def _process_running(pid: int) -> bool:
     return True
 
 
-def web_workbench_status() -> dict[str, Any]:
-    state_path = web_service_state_path()
+def web_workbench_status(workspace: Path) -> dict[str, Any]:
+    state_path = web_service_state_path(workspace)
     if not state_path.exists():
         return {
             "running": False,
             "state_path": str(state_path),
-            "log_path": str(web_service_log_path()),
+            "log_path": str(web_service_log_path(workspace)),
+            "web_dir": str(web_workbench_dir(workspace)),
         }
     state = read_json(state_path)
     pid = int(state.get("pid", 0))
@@ -311,20 +335,23 @@ def web_workbench_status() -> dict[str, Any]:
         **state,
         "running": running,
         "state_path": str(state_path),
-        "log_path": str(web_service_log_path()),
+        "log_path": str(web_service_log_path(workspace)),
+        "web_dir": str(web_workbench_dir(workspace)),
     }
 
 
-def _start_web_workbench(port: int = 5173, host: str = "127.0.0.1") -> dict[str, Any]:
-    status = web_workbench_status()
+def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0.1") -> dict[str, Any]:
+    setup_workspace(workspace)
+    status = web_workbench_status(workspace)
     if status.get("running"):
         return {"ok": True, **status}
 
-    web_dir = _web_dir()
+    web_dir = web_workbench_dir(workspace)
     if not (web_dir / "package.json").exists():
         return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
 
-    log_path = web_service_log_path()
+    log_path = web_service_log_path(workspace)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("a", encoding="utf-8")
     command = ["npm", "run", "dev", "--", "--host", host, "--port", str(port)]
     process = subprocess.Popen(
@@ -344,13 +371,13 @@ def _start_web_workbench(port: int = 5173, host: str = "127.0.0.1") -> dict[str,
         "web_dir": str(web_dir),
         "started_at": int(time.time()),
     }
-    write_json(web_service_state_path(), state)
+    write_json(web_service_state_path(workspace), state)
     return {"ok": True, "running": True, **state, "log_path": str(log_path)}
 
 
-def _stop_web_workbench() -> dict[str, Any]:
-    status = web_workbench_status()
-    state_path = web_service_state_path()
+def _stop_web_workbench(workspace: Path) -> dict[str, Any]:
+    status = web_workbench_status(workspace)
+    state_path = web_service_state_path(workspace)
     pid = int(status.get("pid", 0) or 0)
     if status.get("running") and pid:
         os.kill(pid, signal.SIGTERM)
@@ -364,8 +391,8 @@ def _stop_web_workbench() -> dict[str, Any]:
     }
 
 
-def _web_workbench_logs(lines: int = 80) -> dict[str, Any]:
-    log_path = web_service_log_path()
+def _web_workbench_logs(workspace: Path, lines: int = 80) -> dict[str, Any]:
+    log_path = web_service_log_path(workspace)
     if not log_path.exists():
         return {"ok": True, "log_path": str(log_path), "lines": []}
     content = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -374,20 +401,23 @@ def _web_workbench_logs(lines: int = 80) -> dict[str, Any]:
 
 def run_web_workbench(
     command: str = "dev",
+    workspace: Path | None = None,
     port: int = 5173,
     host: str = "127.0.0.1",
     log_lines: int = 80,
 ) -> dict[str, Any]:
+    resolved_workspace = resolve_workspace(workspace)
     if command == "start":
-        return _start_web_workbench(port=port, host=host)
+        return _start_web_workbench(resolved_workspace, port=port, host=host)
     if command == "status":
-        return {"ok": True, **web_workbench_status()}
+        return {"ok": True, **web_workbench_status(resolved_workspace)}
     if command == "stop":
-        return _stop_web_workbench()
+        return _stop_web_workbench(resolved_workspace)
     if command == "logs":
-        return _web_workbench_logs(log_lines)
+        return _web_workbench_logs(resolved_workspace, log_lines)
 
-    web_dir = _web_dir()
+    setup_workspace(resolved_workspace)
+    web_dir = web_workbench_dir(resolved_workspace)
     if not (web_dir / "package.json").exists():
         return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
     result = subprocess.run(
@@ -450,6 +480,7 @@ def main() -> int:
     web_parser.add_argument("--port", type=int, default=5173)
     web_parser.add_argument("--host", default="127.0.0.1")
     web_parser.add_argument("--log-lines", type=int, default=80)
+    web_parser.add_argument("--workspace", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -512,6 +543,7 @@ def main() -> int:
     if args.command == "web":
         result = run_web_workbench(
             args.web_command,
+            workspace=resolve_workspace(args.workspace),
             port=args.port,
             host=args.host,
             log_lines=args.log_lines,

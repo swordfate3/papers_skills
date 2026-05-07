@@ -13,7 +13,9 @@ from paper_workflow import (  # noqa: E402
     enable_local_mineru,
     load_default_workspace,
     local_mineru_status,
+    release_web_workbench,
     run_web_workbench,
+    web_workbench_dir,
     web_workbench_status,
     save_default_workspace,
     setup_workspace,
@@ -38,6 +40,8 @@ def test_setup_workspace_creates_expected_directories(tmp_path):
         "state",
     ]:
         assert (workspace / relative).exists()
+    assert (workspace / "web/package.json").is_file()
+    assert (workspace / "web/src/App.tsx").is_file()
 
 
 def test_update_state_records_stage(tmp_path):
@@ -138,20 +142,20 @@ def test_run_web_workbench_executes_foreground_npm_command(monkeypatch):
 
     monkeypatch.setattr(paper_workflow.subprocess, "run", fake_run)
 
-    result = run_web_workbench("build")
+    result = run_web_workbench("build", workspace=Path("/tmp/paper-workspace"))
 
     assert result["ok"] is True
     assert calls[0][0] == ["npm", "run", "build"]
-    assert calls[0][1]["cwd"].name == "web"
+    assert calls[0][1]["cwd"] == Path("/tmp/paper-workspace/web")
 
 
 def test_web_workbench_status_reports_stopped_when_no_state(tmp_path, monkeypatch):
     import paper_workflow
 
     state_path = tmp_path / "web-service.json"
-    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
 
-    status = web_workbench_status()
+    status = web_workbench_status(tmp_path)
 
     assert status["running"] is False
     assert status["state_path"] == str(state_path)
@@ -170,15 +174,16 @@ def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, mon
         calls.append((cmd, kwargs))
         return Process()
 
-    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
     monkeypatch.setattr(paper_workflow.subprocess, "Popen", fake_popen)
 
-    result = run_web_workbench("start", port=5179, host="127.0.0.1")
+    result = run_web_workbench("start", workspace=tmp_path, port=5179, host="127.0.0.1")
 
     assert result["ok"] is True
     assert result["pid"] == 4321
     assert result["url"] == "http://127.0.0.1:5179"
     assert calls[0][0] == ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5179"]
+    assert calls[0][1]["cwd"] == tmp_path / "web"
     assert state_path.exists()
 
 
@@ -187,10 +192,20 @@ def test_run_web_workbench_stop_removes_state_for_dead_process(tmp_path, monkeyp
 
     state_path = tmp_path / "web-service.json"
     state_path.write_text('{"pid": 999999, "url": "http://127.0.0.1:5179"}', encoding="utf-8")
-    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda: state_path)
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
 
-    result = run_web_workbench("stop")
+    result = run_web_workbench("stop", workspace=tmp_path)
 
     assert result["ok"] is True
     assert result["running"] is False
     assert not state_path.exists()
+
+
+def test_release_web_workbench_copies_template_to_workspace(tmp_path):
+    workspace = tmp_path / "paper-library"
+    target = release_web_workbench(workspace)
+
+    assert target == workspace / "web"
+    assert (target / "package.json").is_file()
+    assert (target / "src/App.tsx").is_file()
+    assert web_workbench_dir(workspace) == target

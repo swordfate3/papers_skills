@@ -63,11 +63,19 @@ flowchart TD
 
 ## Web 可视化工作台
 
-技能包内置了一个 React/Vite Web 工作台，位置在：
+技能包内置了一个 React/Vite Web 工作台模板，模板位置在：
 
 ```text
 skills/paper-research-workflow/web/
 ```
+
+首次 `setup` 时，这个模板会释放到用户选择的长期论文工作区：
+
+```text
+<paper-library>/web/
+```
+
+后续 `npm install`、`npm run dev`、服务状态和日志都发生在这个目标工作区副本中，不会写入 skill 安装目录。
 
 这个工作台把论文阅读流程可视化：左侧是论文分类，右侧是三列阅读卡，分别对应 `通俗易懂`、`专家阅读`、`复现计划`。每张卡底部都有一个平台对话框，可以选择 `Codex`、`Claude Code` 或 `OpenClaw`，输入“讲得更详细”“专家阅读更关注实验缺陷”“复现计划改成 PyTorch 路线”等请求后，生成可交给对应平台继续执行的结构化任务文本。
 
@@ -77,8 +85,9 @@ skills/paper-research-workflow/web/
 
 ```bash
 cd skills/paper-research-workflow
-python scripts/paper_workflow.py web --web-command start --host 127.0.0.1 --port 5173
-python scripts/paper_workflow.py web --web-command status
+python scripts/paper_workflow.py setup --workspace /path/to/paper-library --save-default
+python scripts/paper_workflow.py web --web-command start --workspace /path/to/paper-library --host 127.0.0.1 --port 5173
+python scripts/paper_workflow.py web --web-command status --workspace /path/to/paper-library
 ```
 
 构建验证：

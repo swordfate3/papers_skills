@@ -152,3 +152,5 @@ def test_web_workbench_child_skill_describes_service_lifecycle():
     )
     for word in ["start", "status", "stop", "logs", "maintenance", "python scripts/paper_workflow.py web"]:
         assert word in text
+    assert "<workspace>/web" in text
+    assert "target workspace" in text

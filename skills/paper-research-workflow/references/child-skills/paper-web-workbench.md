@@ -7,7 +7,7 @@ description: Use when the user asks to open, start, stop, check, debug, restart,
 
 ## Purpose
 
-Operate the bundled React/Vite workbench in `web/`. This child skill is for service lifecycle and maintenance around the visual paper workflow UI.
+Operate the bundled React/Vite workbench. The skill package stores a template in `web/`, but the running app must live in the user's target workspace at `<workspace>/web`. All service maintenance should target that workspace copy.
 
 ## When To Use
 
@@ -22,56 +22,75 @@ Use this when the user asks to:
 
 ## Commands
 
-Run from the installed `paper-research-workflow` skill directory.
+Run from the installed `paper-research-workflow` skill directory, but always point commands at the target workspace when it is not already saved as the default.
+
+First release the workbench into the target workspace:
+
+```bash
+python scripts/paper_workflow.py setup --workspace <workspace> --save-default
+```
+
+The helper copies the bundled template to:
+
+```text
+<workspace>/web
+```
+
+Install npm dependencies in that target workspace copy:
+
+```bash
+cd <workspace>/web
+npm install
+```
 
 Start the service in the background:
 
 ```bash
-python scripts/paper_workflow.py web --web-command start --host 127.0.0.1 --port 5173
+python scripts/paper_workflow.py web --web-command start --workspace <workspace> --host 127.0.0.1 --port 5173
 ```
 
 Check status:
 
 ```bash
-python scripts/paper_workflow.py web --web-command status
+python scripts/paper_workflow.py web --web-command status --workspace <workspace>
 ```
 
 Read recent logs:
 
 ```bash
-python scripts/paper_workflow.py web --web-command logs --log-lines 120
+python scripts/paper_workflow.py web --web-command logs --workspace <workspace> --log-lines 120
 ```
 
 Stop the service:
 
 ```bash
-python scripts/paper_workflow.py web --web-command stop
+python scripts/paper_workflow.py web --web-command stop --workspace <workspace>
 ```
 
 Foreground development, build, test, and preview:
 
 ```bash
-python scripts/paper_workflow.py web --web-command dev
-python scripts/paper_workflow.py web --web-command build
-python scripts/paper_workflow.py web --web-command test
-python scripts/paper_workflow.py web --web-command preview
+python scripts/paper_workflow.py web --web-command dev --workspace <workspace>
+python scripts/paper_workflow.py web --web-command build --workspace <workspace>
+python scripts/paper_workflow.py web --web-command test --workspace <workspace>
+python scripts/paper_workflow.py web --web-command preview --workspace <workspace>
 ```
 
 ## Maintenance Rules
 
 - Before starting, run `status`; if already running, report the existing URL instead of starting a second service.
 - If `start` fails, run `logs` and report the relevant npm or Vite error.
-- If dependencies are missing, tell the user to allow `npm install` in `web/`; do not claim the service is ready.
+- If dependencies are missing, tell the user to allow `npm install` in `<workspace>/web`; do not claim the service is ready.
 - Prefer `start` for long-running service use and `dev` only when the user wants foreground output.
 - Use `stop` before changing ports or after the user says they are done with the visualizer.
 
 ## State Files
 
-The helper records service state inside the skill directory:
+The helper records service state inside the target workspace:
 
 ```text
-.paper-web-service.json
-.paper-web-service.log
+<workspace>/state/.paper-web-service.json
+<workspace>/state/.paper-web-service.log
 ```
 
 The state file stores `pid`, `url`, `host`, `port`, command, and start time. The log file stores Vite stdout/stderr for debugging.
