@@ -700,9 +700,11 @@ def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0
         process = subprocess.Popen(
             command,
             cwd=web_dir,
+            stdin=subprocess.DEVNULL,
             stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
+            start_new_session=True,
         )
         url = f"http://{host}:{port}"
         time.sleep(0.3)
@@ -740,6 +742,7 @@ def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0
             "command": " ".join(command),
             "web_dir": str(web_dir),
             "started_at": int(time.time()),
+            "detached": True,
         }
         write_json(web_service_state_path(workspace), state)
         return {"ok": True, "running": True, **state, "log_path": str(log_path)}

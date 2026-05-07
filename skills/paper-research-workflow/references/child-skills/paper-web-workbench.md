@@ -77,7 +77,7 @@ Start the service in the background:
 python scripts/paper_workflow.py web --web-command start --workspace <workspace> --host 127.0.0.1 --port 5173
 ```
 
-`start` first checks that npm dependencies are installed in `<workspace>/web`. If `node_modules/.bin/vite` or `node_modules/vite` is missing, it returns `dependencies_missing` with the next command to run instead of starting a broken service. After spawning Vite, it waits briefly, checks whether the process exited, probes the HTTP URL, and writes the state file only after the URL is reachable. If startup fails, the response includes `reason`, `returncode` when available, `log_path`, and `log_tail`.
+`start` first checks that npm dependencies are installed in `<workspace>/web`. If `node_modules/.bin/vite` or `node_modules/vite` is missing, it returns `dependencies_missing` with the next command to run instead of starting a broken service. After spawning Vite, it detaches the child process with `stdin=DEVNULL` and `start_new_session=True`, waits briefly, checks whether the process exited, probes the HTTP URL, and writes the state file only after the URL is reachable. If startup fails, the response includes `reason`, `returncode` when available, `log_path`, and `log_tail`.
 
 Check status:
 
@@ -119,7 +119,7 @@ python scripts/paper_workflow.py web --web-command preview --workspace <workspac
 - Before starting, run `status`; if already running, report the existing URL instead of starting a second service.
 - If `start` fails, run `logs` and report the relevant npm or Vite error.
 - If dependencies are missing, tell the user to allow `npm install` in `<workspace>/web`; do not claim the service is ready.
-- Prefer `start` for long-running service use and `dev` only when the user wants foreground output.
+- Prefer `start` for long-running service use. If the current agent runtime still cleans up detached subprocesses after the command exits, use `dev` in a long-running foreground session from `<workspace>/web`.
 - Run `refresh-data` after a manual edit to `knowledge/` artifacts when the user wants the UI updated immediately; setup, ingest, start, and foreground web commands also refresh it.
 - Use `validate-release` after release changes to confirm there are no stale sample files, forbidden demo strings, or invalid data JSON.
 - `validate-release` ignores normal runtime artifacts such as `node_modules`, `dist`, `.vite`, `package-lock.json`, and `tsconfig.tsbuildinfo`; those should not make a working released Web fail validation.

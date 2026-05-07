@@ -195,6 +195,8 @@ def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, mon
     assert result["url"] == "http://127.0.0.1:5179"
     assert calls[0][0] == ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5179"]
     assert calls[0][1]["cwd"] == tmp_path / "web"
+    assert calls[0][1]["stdin"] == paper_workflow.subprocess.DEVNULL
+    assert calls[0][1]["start_new_session"] is True
     assert state_path.exists()
 
 
