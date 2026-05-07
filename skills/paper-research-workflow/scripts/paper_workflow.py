@@ -8,6 +8,8 @@ import signal
 import subprocess
 import shutil
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -54,9 +56,9 @@ WEB_RELEASE_EXCLUDES = (
 )
 WEB_FORBIDDEN_FILES = (
     "src/sampleData.ts",
-    "package-lock.json",
-    "tsconfig.tsbuildinfo",
+    "scripts/workspaceDataSource.mjs",
 )
+WEB_RUNTIME_ARTIFACTS = ("package-lock.json", "tsconfig.tsbuildinfo", "node_modules", "dist", ".vite")
 WEB_FORBIDDEN_PATTERNS = (
     "sampleData",
     "sampleWorkbenchData",
@@ -412,17 +414,22 @@ def export_web_workbench_data(workspace: Path) -> Path:
 def validate_web_release(workspace: Path) -> dict[str, Any]:
     web_dir = web_workbench_dir(workspace)
     errors: list[str] = []
+    reason = ""
     if not web_dir.exists():
         return {"ok": False, "errors": [f"missing web dir: {web_dir}"], "web_dir": str(web_dir)}
 
     for relative in WEB_FORBIDDEN_FILES:
         if (web_dir / relative).exists():
             errors.append(f"forbidden file exists: {relative}")
+            if relative == "scripts/workspaceDataSource.mjs":
+                reason = "stale_web_release"
 
     for path in web_dir.rglob("*"):
         if not path.is_file():
             continue
-        if any(part in {"node_modules", "dist", ".vite"} for part in path.relative_to(web_dir).parts):
+        if any(part in set(WEB_RUNTIME_ARTIFACTS) for part in path.relative_to(web_dir).parts):
+            continue
+        if path.name in {"package-lock.json", "tsconfig.tsbuildinfo"}:
             continue
         if path.suffix in {".ts", ".tsx", ".js", ".mjs", ".json"}:
             text = path.read_text(encoding="utf-8", errors="ignore")
@@ -446,7 +453,14 @@ def validate_web_release(workspace: Path) -> dict[str, Any]:
             if not isinstance(data.get("innovations"), list):
                 errors.append("innovations must be list")
 
-    return {"ok": not errors, "errors": errors, "web_dir": str(web_dir), "data_path": str(data_path)}
+    result = {"ok": not errors, "errors": errors, "web_dir": str(web_dir), "data_path": str(data_path)}
+    if reason:
+        result["reason"] = reason
+        result["next"] = (
+            "python scripts/paper_workflow.py web --web-command release "
+            f"--workspace {workspace} --force-release"
+        )
+    return result
 
 
 def _template_memory() -> dict[str, Any]:
@@ -616,24 +630,45 @@ def _process_running(pid: int) -> bool:
     return True
 
 
+def _url_reachable(url: str, timeout: float = 0.5) -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return 200 <= response.status < 500
+    except (OSError, urllib.error.URLError):
+        return False
+
+
+def _wait_for_url(url: str, timeout: float = 3.0) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _url_reachable(url, timeout=0.5):
+            return True
+        time.sleep(0.2)
+    return _url_reachable(url, timeout=0.5)
+
+
 def web_workbench_status(workspace: Path) -> dict[str, Any]:
     state_path = web_service_state_path(workspace)
-    if not state_path.exists():
-        return {
-            "running": False,
-            "state_path": str(state_path),
-            "log_path": str(web_service_log_path(workspace)),
-            "web_dir": str(web_workbench_dir(workspace)),
-        }
-    state = read_json(state_path)
-    pid = int(state.get("pid", 0))
-    running = bool(pid and _process_running(pid))
-    return {
-        **state,
-        "running": running,
+    data = {
         "state_path": str(state_path),
         "log_path": str(web_service_log_path(workspace)),
         "web_dir": str(web_workbench_dir(workspace)),
+        "managed_by_state_file": state_path.exists(),
+    }
+    if not state_path.exists():
+        return {**data, "running": False, "pid_running": False, "url_reachable": False}
+    state = read_json(state_path)
+    pid = int(state.get("pid", 0))
+    pid_running = bool(pid and _process_running(pid))
+    url = str(state.get("url") or "")
+    url_reachable = bool(url and _url_reachable(url))
+    running = pid_running and url_reachable
+    return {
+        **state,
+        **data,
+        "running": running,
+        "pid_running": pid_running,
+        "url_reachable": url_reachable,
     }
 
 
@@ -648,30 +683,68 @@ def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0
     web_dir = web_workbench_dir(workspace)
     if not (web_dir / "package.json").exists():
         return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
+    if not _web_dependencies_ready(web_dir):
+        return {
+            "ok": False,
+            "running": False,
+            "reason": "dependencies_missing",
+            "web_dir": str(web_dir),
+            "next": f"cd {web_dir} && npm install",
+        }
 
     log_path = web_service_log_path(workspace)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("a", encoding="utf-8")
     command = ["npm", "run", "dev", "--", "--host", host, "--port", str(port)]
-    process = subprocess.Popen(
-        command,
-        cwd=web_dir,
-        stdout=log_file,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    url = f"http://{host}:{port}"
-    state = {
-        "pid": process.pid,
-        "url": url,
-        "host": host,
-        "port": port,
-        "command": " ".join(command),
-        "web_dir": str(web_dir),
-        "started_at": int(time.time()),
-    }
-    write_json(web_service_state_path(workspace), state)
-    return {"ok": True, "running": True, **state, "log_path": str(log_path)}
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=web_dir,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        url = f"http://{host}:{port}"
+        time.sleep(0.3)
+        returncode = process.poll()
+        if returncode is not None:
+            log_file.flush()
+            return {
+                "ok": False,
+                "running": False,
+                "reason": "dev_server_failed_to_start",
+                "returncode": returncode,
+                "log_path": str(log_path),
+                "log_tail": _web_log_tail(workspace),
+            }
+        if not _wait_for_url(url):
+            log_file.flush()
+            try:
+                process.terminate()
+            except AttributeError:
+                os.kill(process.pid, signal.SIGTERM)
+            return {
+                "ok": False,
+                "running": False,
+                "reason": "dev_server_not_reachable",
+                "url": url,
+                "pid": process.pid,
+                "log_path": str(log_path),
+                "log_tail": _web_log_tail(workspace),
+            }
+        state = {
+            "pid": process.pid,
+            "url": url,
+            "host": host,
+            "port": port,
+            "command": " ".join(command),
+            "web_dir": str(web_dir),
+            "started_at": int(time.time()),
+        }
+        write_json(web_service_state_path(workspace), state)
+        return {"ok": True, "running": True, **state, "log_path": str(log_path)}
+    finally:
+        log_file.close()
 
 
 def _stop_web_workbench(workspace: Path) -> dict[str, Any]:
@@ -696,6 +769,14 @@ def _web_workbench_logs(workspace: Path, lines: int = 80) -> dict[str, Any]:
         return {"ok": True, "log_path": str(log_path), "lines": []}
     content = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
     return {"ok": True, "log_path": str(log_path), "lines": content[-lines:]}
+
+
+def _web_log_tail(workspace: Path, lines: int = 80) -> list[str]:
+    return _web_workbench_logs(workspace, lines)["lines"]
+
+
+def _web_dependencies_ready(web_dir: Path) -> bool:
+    return (web_dir / "node_modules/.bin/vite").exists() or (web_dir / "node_modules/vite").exists()
 
 
 def run_web_workbench(

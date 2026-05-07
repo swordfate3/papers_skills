@@ -169,8 +169,16 @@ def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, mon
     state_path = tmp_path / "web-service.json"
     calls = []
 
+    release_web_workbench(tmp_path)
+    (tmp_path / "web/node_modules/.bin").mkdir(parents=True)
+    (tmp_path / "web/node_modules/.bin/vite").write_text("", encoding="utf-8")
+
     class Process:
         pid = 4321
+        returncode = None
+
+        def poll(self):
+            return None
 
     def fake_popen(cmd, **kwargs):
         calls.append((cmd, kwargs))
@@ -178,6 +186,7 @@ def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, mon
 
     monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
     monkeypatch.setattr(paper_workflow.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(paper_workflow, "_wait_for_url", lambda url, timeout=3.0: True)
 
     result = run_web_workbench("start", workspace=tmp_path, port=5179, host="127.0.0.1")
 
@@ -187,6 +196,75 @@ def test_run_web_workbench_start_writes_state_and_launches_process(tmp_path, mon
     assert calls[0][0] == ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5179"]
     assert calls[0][1]["cwd"] == tmp_path / "web"
     assert state_path.exists()
+
+
+def test_run_web_workbench_start_requires_installed_dependencies(tmp_path):
+    result = run_web_workbench("start", workspace=tmp_path, port=5179, host="127.0.0.1")
+
+    assert result["ok"] is False
+    assert result["reason"] == "dependencies_missing"
+    assert "npm install" in result["next"]
+
+
+def test_run_web_workbench_start_reports_immediate_process_failure(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    release_web_workbench(tmp_path)
+    (tmp_path / "web/node_modules/.bin").mkdir(parents=True)
+    (tmp_path / "web/node_modules/.bin/vite").write_text("", encoding="utf-8")
+
+    class Process:
+        pid = 4321
+        returncode = 1
+
+        def poll(self):
+            return 1
+
+    def fake_popen(cmd, **kwargs):
+        log_file = kwargs["stdout"]
+        log_file.write("vite failed\n")
+        log_file.flush()
+        return Process()
+
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
+    monkeypatch.setattr(paper_workflow.subprocess, "Popen", fake_popen)
+
+    result = run_web_workbench("start", workspace=tmp_path, port=5179, host="127.0.0.1")
+
+    assert result["ok"] is False
+    assert result["reason"] == "dev_server_failed_to_start"
+    assert result["returncode"] == 1
+    assert "vite failed" in "\n".join(result["log_tail"])
+    assert not state_path.exists()
+
+
+def test_run_web_workbench_start_reports_unreachable_url(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    release_web_workbench(tmp_path)
+    (tmp_path / "web/node_modules/.bin").mkdir(parents=True)
+    (tmp_path / "web/node_modules/.bin/vite").write_text("", encoding="utf-8")
+
+    class Process:
+        pid = 4321
+        returncode = None
+
+        def poll(self):
+            return None
+
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
+    monkeypatch.setattr(paper_workflow.subprocess, "Popen", lambda *args, **kwargs: Process())
+    monkeypatch.setattr(paper_workflow, "_wait_for_url", lambda url, timeout=3.0: False)
+    monkeypatch.setattr(paper_workflow.os, "kill", lambda pid, sig: None)
+
+    result = run_web_workbench("start", workspace=tmp_path, port=5179, host="127.0.0.1")
+
+    assert result["ok"] is False
+    assert result["reason"] == "dev_server_not_reachable"
+    assert result["url"] == "http://127.0.0.1:5179"
+    assert not state_path.exists()
 
 
 def test_run_web_workbench_stop_removes_state_for_dead_process(tmp_path, monkeypatch):
@@ -314,6 +392,48 @@ def test_run_web_workbench_release_force_and_validate_release(tmp_path):
     assert release["ok"] is True
     assert validation["ok"] is True
     assert not stale_file.exists()
+
+
+def test_validate_web_release_allows_runtime_artifacts_but_flags_stale_sources(tmp_path):
+    workspace = tmp_path / "paper-library"
+    setup_workspace(workspace)
+    (workspace / "web/package-lock.json").write_text("{}", encoding="utf-8")
+    (workspace / "web/tsconfig.tsbuildinfo").write_text("{}", encoding="utf-8")
+    (workspace / "web/node_modules/.bin").mkdir(parents=True)
+    (workspace / "web/dist").mkdir()
+
+    valid_with_runtime_artifacts = validate_web_release(workspace)
+    assert valid_with_runtime_artifacts["ok"] is True
+
+    stale = workspace / "web/scripts/workspaceDataSource.mjs"
+    stale.parent.mkdir()
+    stale.write_text("export default {}", encoding="utf-8")
+    invalid = validate_web_release(workspace)
+
+    assert invalid["ok"] is False
+    assert invalid["reason"] == "stale_web_release"
+    assert any("workspaceDataSource.mjs" in error for error in invalid["errors"])
+    assert "--force-release" in invalid["next"]
+
+
+def test_web_workbench_status_reports_pid_and_url_reachability(tmp_path, monkeypatch):
+    import paper_workflow
+
+    state_path = tmp_path / "web-service.json"
+    state_path.write_text(
+        '{"pid": 123, "url": "http://127.0.0.1:5173", "host": "127.0.0.1", "port": 5173}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(paper_workflow, "web_service_state_path", lambda workspace=None: state_path)
+    monkeypatch.setattr(paper_workflow, "_process_running", lambda pid: True)
+    monkeypatch.setattr(paper_workflow, "_url_reachable", lambda url, timeout=0.5: False)
+
+    status = web_workbench_status(tmp_path)
+
+    assert status["pid_running"] is True
+    assert status["url_reachable"] is False
+    assert status["managed_by_state_file"] is True
+    assert status["running"] is False
 
 
 def test_validate_web_release_reports_invalid_json_without_crashing(tmp_path):

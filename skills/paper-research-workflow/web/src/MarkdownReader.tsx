@@ -40,7 +40,8 @@ function blockFor(lines: string[], index: number): { element: ReactElement; next
   if (trimmed.startsWith("#")) {
     const level = Math.min(trimmed.match(/^#+/)?.[0].length ?? 1, 3);
     const text = trimmed.replace(/^#+\s*/, "");
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+    const headingTags = ["h1", "h2", "h3"] as const;
+    const Tag = headingTags[level - 1];
     return {
       element: <Tag key={index} dangerouslySetInnerHTML={{ __html: inlineFormat(text) }} />,
       next: index + 1

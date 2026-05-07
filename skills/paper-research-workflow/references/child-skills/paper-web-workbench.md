@@ -77,13 +77,15 @@ Start the service in the background:
 python scripts/paper_workflow.py web --web-command start --workspace <workspace> --host 127.0.0.1 --port 5173
 ```
 
+`start` first checks that npm dependencies are installed in `<workspace>/web`. If `node_modules/.bin/vite` or `node_modules/vite` is missing, it returns `dependencies_missing` with the next command to run instead of starting a broken service. After spawning Vite, it waits briefly, checks whether the process exited, probes the HTTP URL, and writes the state file only after the URL is reachable. If startup fails, the response includes `reason`, `returncode` when available, `log_path`, and `log_tail`.
+
 Check status:
 
 ```bash
 python scripts/paper_workflow.py web --web-command status --workspace <workspace>
 ```
 
-`status` reports service state and whether the data file exists; it does not rewrite the Web template.
+`status` reports service state and whether the data file exists; it does not rewrite the Web template. It includes `pid_running`, `url_reachable`, and `managed_by_state_file`, so stale state files and unreachable dev servers are easier to diagnose.
 
 Validate a released workbench:
 
@@ -120,6 +122,8 @@ python scripts/paper_workflow.py web --web-command preview --workspace <workspac
 - Prefer `start` for long-running service use and `dev` only when the user wants foreground output.
 - Run `refresh-data` after a manual edit to `knowledge/` artifacts when the user wants the UI updated immediately; setup, ingest, start, and foreground web commands also refresh it.
 - Use `validate-release` after release changes to confirm there are no stale sample files, forbidden demo strings, or invalid data JSON.
+- `validate-release` ignores normal runtime artifacts such as `node_modules`, `dist`, `.vite`, `package-lock.json`, and `tsconfig.tsbuildinfo`; those should not make a working released Web fail validation.
+- If `validate-release` reports `stale_web_release`, run `web --web-command release --force-release` to back up and replace the old Web template.
 - Use `stop` before changing ports or after the user says they are done with the visualizer.
 
 ## State Files
