@@ -1,9 +1,8 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BookOpen, Brain, Code2, FileText, Lightbulb, MessageSquare, Network, Search } from "lucide-react";
 import { InnovationIdea, Paper, Platform, ReadingCard, ReadingKind, WorkbenchData, readingKindLabels } from "./domain";
-import { sampleWorkbenchData } from "./sampleData";
 import { buildPlatformPrompt } from "./promptBuilder";
-import { WORKBENCH_POLL_INTERVAL_MS, dataOrSample, loadWorkbenchData } from "./workbenchData";
+import { WORKBENCH_POLL_INTERVAL_MS, emptyWorkbenchData, loadWorkbenchData } from "./workbenchData";
 import { MarkdownReader } from "./MarkdownReader";
 
 const cardIcons: Record<ReadingKind, ReactNode> = {
@@ -18,11 +17,12 @@ function categoriesFor(items: Paper[]) {
   return ["全部论文", ...Array.from(new Set(items.map((paper) => paper.category))), "创新挖掘"];
 }
 
-function EmptyWorkspace({ workspace }: { workspace: string }) {
+function EmptyWorkspace({ workspace, error }: { workspace: string; error?: string }) {
   return (
     <section className="empty-workspace" aria-label="空工作区">
       <h2>还没有可视化论文数据</h2>
       <p>{workspace ? `当前工作区：${workspace}` : "请先在论文工作区导入论文或刷新 Web 数据。"}</p>
+      {error && <p className="error-text">{error}</p>}
     </section>
   );
 }
@@ -184,17 +184,14 @@ function InnovationBoard({
 }
 
 export default function App() {
-  const [liveData, setLiveData] = useState<WorkbenchData>(sampleWorkbenchData);
+  const [liveData, setLiveData] = useState<WorkbenchData>(() => emptyWorkbenchData());
   const [hasLoadedWorkspaceData, setHasLoadedWorkspaceData] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [activeCategory, setActiveCategory] = useState("全部论文");
-  const [selectedPaperId, setSelectedPaperId] = useState(sampleWorkbenchData.papers[0].id);
+  const [selectedPaperId, setSelectedPaperId] = useState("");
   const [activeReaderKind, setActiveReaderKind] = useState<ReadingKind | null>(null);
-  const displayData = useMemo(
-    () => (hasLoadedWorkspaceData ? liveData : dataOrSample(liveData)),
-    [hasLoadedWorkspaceData, liveData]
-  );
-  const papers = displayData.papers;
-  const innovations = displayData.innovations;
+  const papers = liveData.papers;
+  const innovations = liveData.innovations;
   const hasRealWorkspaceContent = hasLoadedWorkspaceData && (liveData.papers.length > 0 || liveData.innovations.length > 0);
   const categories = useMemo(() => categoriesFor(papers), [papers]);
   const papersById = useMemo(() => new Map(papers.map((paper) => [paper.id, paper])), [papers]);
@@ -216,25 +213,33 @@ export default function App() {
         if (!cancelled) {
           setLiveData(data);
           setHasLoadedWorkspaceData(true);
+          setLoadError("");
         }
       } catch {
         if (!cancelled) {
-          setHasLoadedWorkspaceData(false);
+          setHasLoadedWorkspaceData(true);
+          setLoadError("无法读取 paper-workbench-data.json，请运行 refresh-data 后重试。");
         }
       }
     }
 
     void refresh();
     const timer = window.setInterval(refresh, WORKBENCH_POLL_INTERVAL_MS);
+    window.addEventListener("focus", refresh);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
     };
   }, []);
 
   useEffect(() => {
     if (!papersById.has(selectedPaperId) && papers[0]) {
       setSelectedPaperId(papers[0].id);
+      setActiveReaderKind(null);
+    }
+    if (selectedPaperId && !papersById.has(selectedPaperId) && !papers[0]) {
+      setSelectedPaperId("");
       setActiveReaderKind(null);
     }
   }, [papers, papersById, selectedPaperId]);
@@ -292,7 +297,7 @@ export default function App() {
         </header>
 
         {!hasRealWorkspaceContent && hasLoadedWorkspaceData ? (
-          <EmptyWorkspace workspace={liveData.workspace} />
+          <EmptyWorkspace workspace={liveData.workspace} error={loadError} />
         ) : activeCategory === "创新挖掘" ? (
           <InnovationBoard ideas={innovations} papersById={papersById} onSelectPaper={selectPaper} />
         ) : selectedPaper && activeReaderKind ? (

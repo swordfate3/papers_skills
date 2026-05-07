@@ -18,6 +18,7 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "scripts/mineru_to_md.sh",
         "scripts/mineru_local_docker.sh",
         "schemas/paper-memory.schema.json",
+        "schemas/web-workbench-data.schema.json",
         "templates/paper-memory.json",
         "references/pdf-processing.md",
         "references/mineru-local.md",
@@ -29,10 +30,10 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "web/src/App.tsx",
         "web/src/domain.ts",
         "web/src/MarkdownReader.tsx",
-        "web/src/sampleData.ts",
         "web/src/workbenchData.ts",
         "web/src/promptBuilder.ts",
         "web/src/App.test.tsx",
+        "web/public/paper-workbench-data.json",
     ]:
         assert (SKILL_DIR / relative).is_file()
 
@@ -43,6 +44,32 @@ def test_visual_workbench_declares_expected_frontend_stack():
     assert '"vite"' in package
     assert '"test"' in package
     assert '"build"' in package
+
+
+def test_visual_workbench_template_contains_no_sample_data_or_build_outputs():
+    forbidden_files = [
+        "web/src/sampleData.ts",
+        "web/package-lock.json",
+        "web/tsconfig.tsbuildinfo",
+        "web/dist/index.html",
+    ]
+    for relative in forbidden_files:
+        assert not (SKILL_DIR / relative).exists()
+
+    forbidden_patterns = [
+        "sampleData",
+        "sampleWorkbenchData",
+        "dataOrSample",
+        "2024-differential-transformer",
+        "a1b2c3",
+        "Differential Transformer",
+        "Integral Operator",
+    ]
+    for path in (SKILL_DIR / "web").rglob("*"):
+        if path.is_file() and path.suffix in {".ts", ".tsx", ".js", ".json"}:
+            text = path.read_text(encoding="utf-8")
+            for pattern in forbidden_patterns:
+                assert pattern not in text, f"{pattern!r} found in {path}"
 
 
 def test_single_skill_install_smoke_test(tmp_path):

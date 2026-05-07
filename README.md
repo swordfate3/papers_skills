@@ -83,7 +83,7 @@ skills/paper-research-workflow/web/
 <paper-library>/web/public/paper-workbench-data.json
 ```
 
-前端每 5 秒 hot-read 这个 JSON，所以它显示的是当前论文库里的真实分类、阅读入口、完整 Markdown 文档、复现计划和创新记录；如果导入新论文或生成了新阅读产物，可以运行 `refresh-data` 立即刷新数据文件。技能包模板升级后再次 `setup` 也会同步 `<paper-library>/web/src` 等模板源码，但会保留 `node_modules`、`dist`、`.vite` 运行产物。
+前端每 5 秒 hot-read 这个 JSON，所以它显示的是当前论文库里的真实分类、阅读入口、完整 Markdown 文档、复现计划和创新记录；如果导入新论文或生成了新阅读产物，可以运行 `refresh-data` 立即刷新数据文件。空工作区只显示空状态，不回退到假论文。技能包模板升级后，如果要刷新已释放的 Web 模板，使用 `web --web-command release --force-release`，它会先备份旧 `<paper-library>/web`，再干净复制新模板，并排除 `node_modules`、`dist`、`.vite`、lockfile 和 tsbuildinfo。
 
 这个工作台把论文阅读流程可视化：左侧是论文分类，右侧先显示论文列表和阅读入口按钮，分别对应 `通俗易懂`、`专家阅读`、`复现计划`。点击入口后进入内置 Markdown 文档阅读器，完整阅读对应 `.md` 产物；阅读器底部有平台对话框，可以选择 `Codex`、`Claude Code` 或 `OpenClaw`，输入“讲得更详细”“专家阅读更关注实验缺陷”“复现计划改成 PyTorch 路线”等请求后，生成可交给对应平台继续执行的结构化任务文本。
 
@@ -97,6 +97,7 @@ python scripts/paper_workflow.py setup --workspace /path/to/paper-library --save
 python scripts/paper_workflow.py web --web-command start --workspace /path/to/paper-library --host 127.0.0.1 --port 5173
 python scripts/paper_workflow.py web --web-command status --workspace /path/to/paper-library
 python scripts/paper_workflow.py web --web-command refresh-data --workspace /path/to/paper-library
+python scripts/paper_workflow.py web --web-command validate-release --workspace /path/to/paper-library
 ```
 
 构建验证：
@@ -111,6 +112,12 @@ python scripts/paper_workflow.py web --web-command build
 ```bash
 python scripts/paper_workflow.py web --web-command logs --log-lines 120
 python scripts/paper_workflow.py web --web-command stop
+```
+
+刷新已释放模板：
+
+```bash
+python scripts/paper_workflow.py web --web-command release --workspace /path/to/paper-library --force-release
 ```
 
 ## 语言模式

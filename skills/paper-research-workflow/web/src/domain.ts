@@ -4,6 +4,7 @@ export type Platform = "Codex" | "Claude Code" | "OpenClaw";
 
 export interface ReadingCard {
   kind: ReadingKind;
+  status: "ready" | "pending";
   title: string;
   version: string;
   updatedAt: string;
@@ -37,9 +38,11 @@ export interface InnovationIdea {
   summary: string;
   sources: InnovationSource[];
   artifactPath: string;
+  markdown: string;
 }
 
 export interface WorkbenchData {
+  schemaVersion: 1;
   generatedAt: number;
   workspace: string;
   papers: Paper[];

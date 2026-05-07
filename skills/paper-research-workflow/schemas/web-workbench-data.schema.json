@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Paper Research Web Workbench Data",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "workspace", "papers", "innovations"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "integer"
+    },
+    "workspace": {
+      "type": "string"
+    },
+    "papers": {
+      "type": "array"
+    },
+    "innovations": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

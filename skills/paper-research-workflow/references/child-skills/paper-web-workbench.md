@@ -9,7 +9,7 @@ description: Use when the user asks to open, start, stop, check, debug, restart,
 
 Operate the bundled React/Vite workbench. The skill package stores a template in `web/`, but the running app must live in the user's target workspace at `<workspace>/web`. All service maintenance should target that workspace copy.
 
-The app is data-driven: Python exports live workspace data to `<workspace>/web/public/paper-workbench-data.json`, and the frontend hot-reads that file every 5 seconds. Bundled sample data is only a fallback before the workspace JSON is available.
+The app is data-driven: Python exports live workspace data to `<workspace>/web/public/paper-workbench-data.json`, and the frontend hot-reads that file every 5 seconds. Empty workspaces show an empty state; the Web template must not fall back to bundled sample papers.
 
 ## When To Use
 
@@ -38,7 +38,13 @@ The helper copies the bundled template to:
 <workspace>/web
 ```
 
-If the workbench was already released, the helper syncs updated template source files into `<workspace>/web` and preserves runtime directories:
+If the workbench was already released, normal setup does not merge new source files into the existing Web directory. Use a forced release when the template itself must be refreshed; this backs up the old Web directory and copies a clean template.
+
+```bash
+python scripts/paper_workflow.py web --web-command release --workspace <workspace> --force-release
+```
+
+Forced release excludes runtime directories and build outputs:
 
 ```text
 <workspace>/web/node_modules
@@ -77,7 +83,13 @@ Check status:
 python scripts/paper_workflow.py web --web-command status --workspace <workspace>
 ```
 
-`status` also refreshes `paper-workbench-data.json` before reporting service state.
+`status` reports service state and whether the data file exists; it does not rewrite the Web template.
+
+Validate a released workbench:
+
+```bash
+python scripts/paper_workflow.py web --web-command validate-release --workspace <workspace>
+```
 
 Read recent logs:
 
@@ -106,7 +118,8 @@ python scripts/paper_workflow.py web --web-command preview --workspace <workspac
 - If `start` fails, run `logs` and report the relevant npm or Vite error.
 - If dependencies are missing, tell the user to allow `npm install` in `<workspace>/web`; do not claim the service is ready.
 - Prefer `start` for long-running service use and `dev` only when the user wants foreground output.
-- Run `refresh-data` after a manual edit to `knowledge/` artifacts when the user wants the UI updated immediately; otherwise the next setup, ingest, start, or status command will refresh it.
+- Run `refresh-data` after a manual edit to `knowledge/` artifacts when the user wants the UI updated immediately; setup, ingest, start, and foreground web commands also refresh it.
+- Use `validate-release` after release changes to confirm there are no stale sample files, forbidden demo strings, or invalid data JSON.
 - Use `stop` before changing ports or after the user says they are done with the visualizer.
 
 ## State Files

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import shutil
@@ -41,6 +42,31 @@ WORKSPACE_DIRS = [
 ]
 
 DEFAULT_WORKSPACE_CONFIG = ".paper-workspace.json"
+WEB_DATA_FILENAME = "paper-workbench-data.json"
+WEB_SCHEMA_VERSION = 1
+WEB_RELEASE_EXCLUDES = (
+    "node_modules",
+    "dist",
+    ".vite",
+    "package-lock.json",
+    "*.tsbuildinfo",
+    ".DS_Store",
+)
+WEB_FORBIDDEN_FILES = (
+    "src/sampleData.ts",
+    "package-lock.json",
+    "tsconfig.tsbuildinfo",
+)
+WEB_FORBIDDEN_PATTERNS = (
+    "sampleData",
+    "sampleWorkbenchData",
+    "dataOrSample",
+    "2024-differential-transformer",
+    "a1b2c3",
+    "Differential Transformer",
+    "Integral Operator",
+)
+_FRONT_MATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
 
 
 def default_config_path() -> Path:
@@ -83,7 +109,7 @@ def setup_workspace(workspace: Path) -> None:
     state_path = workspace / "state/papers.json"
     if not state_path.exists():
         write_json(state_path, {"papers": {}})
-    release_web_workbench(workspace)
+    release_web_workbench(workspace, force=False)
     export_web_workbench_data(workspace)
 
 
@@ -138,31 +164,68 @@ def web_service_log_path(workspace: Path | None = None) -> Path:
     return base / ".paper-web-service.log"
 
 
-def release_web_workbench(workspace: Path, overwrite: bool = False) -> Path:
+def release_web_workbench(
+    workspace: Path,
+    overwrite: bool = False,
+    *,
+    force: bool = False,
+    backup: bool = True,
+) -> Path:
     source = _web_dir()
     target = web_workbench_dir(workspace)
     if not source.is_dir():
         raise FileNotFoundError(source)
-    if target.exists() and overwrite:
-        shutil.rmtree(target)
+    force = force or overwrite
+    if target.exists():
+        if not force:
+            return target
+        if backup:
+            backup_path = target.with_name(f"web.backup-{time.strftime('%Y%m%d-%H%M%S')}")
+            counter = 1
+            while backup_path.exists():
+                backup_path = target.with_name(f"web.backup-{time.strftime('%Y%m%d-%H%M%S')}-{counter}")
+                counter += 1
+            shutil.move(str(target), str(backup_path))
+        else:
+            shutil.rmtree(target)
     shutil.copytree(
         source,
         target,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("node_modules", "dist", ".vite"),
+        ignore=shutil.ignore_patterns(*WEB_RELEASE_EXCLUDES),
     )
     return target
 
 
+def strip_front_matter(markdown: str) -> str:
+    return _FRONT_MATTER_RE.sub("", markdown, count=1)
+
+
+def meaningful_lines(markdown: str) -> list[str]:
+    return strip_front_matter(markdown).splitlines()
+
+
+def is_noise_bullet(text: str) -> bool:
+    stripped = text.strip().strip("\"'")
+    if re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9-]{11,}", stripped):
+        return True
+    return stripped.startswith("source_papers")
+
+
 def _first_paragraph(markdown: str) -> str:
     lines = []
-    for raw_line in markdown.splitlines():
+    in_code = False
+    for raw_line in meaningful_lines(markdown):
         line = raw_line.strip()
+        if line.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
         if not line or line.startswith("#"):
             if lines:
                 break
             continue
-        if line.startswith("- "):
+        if line.startswith("- ") or line.startswith("|"):
             continue
         lines.append(line)
     return " ".join(lines)[:260] or "暂无内容，等待对应阅读流程生成。"
@@ -170,21 +233,34 @@ def _first_paragraph(markdown: str) -> str:
 
 def _bullet_points(markdown: str) -> list[str]:
     bullets = []
-    for raw_line in markdown.splitlines():
+    in_code = False
+    for raw_line in meaningful_lines(markdown):
         line = raw_line.strip()
+        if line.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
         if line.startswith("- "):
-            bullets.append(line[2:].strip())
+            item = line[2:].strip()
+            if item and not is_noise_bullet(item):
+                bullets.append(item)
         if len(bullets) >= 4:
             break
     return bullets or ["等待生成更完整的阅读要点。"]
 
 
 def _markdown_title(markdown: str, fallback: str) -> str:
-    for raw_line in markdown.splitlines():
+    for raw_line in meaningful_lines(markdown):
         line = raw_line.strip()
         if line.startswith("#"):
             return line.lstrip("#").strip() or fallback
     return fallback
+
+
+def _version_from_path(path: Path, paper_id: str) -> str:
+    suffix = path.stem.removeprefix(paper_id).lstrip(".")
+    return suffix or "v1"
 
 
 def _latest_markdown(directory: Path, paper_id: str) -> Path | None:
@@ -203,6 +279,7 @@ def _reading_card_from_markdown(
     if path is None:
         return {
             "kind": kind,
+            "status": "pending",
             "title": title,
             "version": "pending",
             "updatedAt": "",
@@ -214,13 +291,14 @@ def _reading_card_from_markdown(
     markdown = path.read_text(encoding="utf-8", errors="replace")
     return {
         "kind": kind,
+        "status": "ready",
         "title": _markdown_title(markdown, title),
-        "version": path.stem.removeprefix(paper_id).lstrip(".") or "v1",
+        "version": _version_from_path(path, paper_id),
         "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)),
         "summary": _first_paragraph(markdown),
         "bullets": _bullet_points(markdown),
         "artifactPath": str(path),
-        "markdown": markdown,
+        "markdown": strip_front_matter(markdown),
     }
 
 
@@ -253,12 +331,23 @@ def _innovation_from_markdown(path: Path, rank: int) -> dict[str, Any]:
         "summary": _first_paragraph(markdown),
         "sources": sources,
         "artifactPath": str(path),
+        "markdown": strip_front_matter(markdown),
     }
 
 
+def _paper_status(memory: dict[str, Any], cards: dict[str, dict[str, Any]]) -> str:
+    if all(card.get("status") == "ready" for card in cards.values()):
+        return "complete"
+    if isinstance(memory.get("status"), dict) and memory["status"].get("ingested"):
+        return "reading"
+    return "ingested"
+
+
 def export_web_workbench_data(workspace: Path) -> Path:
-    release_web_workbench(workspace)
-    public_dir = web_workbench_dir(workspace) / "public"
+    web_dir = web_workbench_dir(workspace)
+    if not web_dir.exists():
+        release_web_workbench(workspace, force=False)
+    public_dir = web_dir / "public"
     public_dir.mkdir(parents=True, exist_ok=True)
 
     papers_payload = []
@@ -269,6 +358,29 @@ def export_web_workbench_data(workspace: Path) -> Path:
         domains = classification.get("domains") if isinstance(classification.get("domains"), list) else []
         keywords = classification.get("keywords") if isinstance(classification.get("keywords"), list) else []
         category = str(domains[0]) if domains else "未分类"
+        cards = {
+            "plain": _reading_card_from_markdown(
+                workspace,
+                paper_id,
+                "plain",
+                "knowledge/cards",
+                "通俗易懂",
+            ),
+            "expert": _reading_card_from_markdown(
+                workspace,
+                paper_id,
+                "expert",
+                "knowledge/expert-readings",
+                "专家阅读",
+            ),
+            "reproduction": _reading_card_from_markdown(
+                workspace,
+                paper_id,
+                "reproduction",
+                "knowledge/reproductions",
+                "复现计划",
+            ),
+        }
         papers_payload.append(
             {
                 "id": paper_id,
@@ -276,30 +388,8 @@ def export_web_workbench_data(workspace: Path) -> Path:
                 "year": int(memory.get("year") or 0),
                 "category": category,
                 "tags": [str(item) for item in keywords[:5]],
-                "status": "complete" if memory.get("status", {}).get("ingested") else "ingested",
-                "cards": {
-                    "plain": _reading_card_from_markdown(
-                        workspace,
-                        paper_id,
-                        "plain",
-                        "knowledge/cards",
-                        "通俗易懂",
-                    ),
-                    "expert": _reading_card_from_markdown(
-                        workspace,
-                        paper_id,
-                        "expert",
-                        "knowledge/expert-readings",
-                        "专家阅读",
-                    ),
-                    "reproduction": _reading_card_from_markdown(
-                        workspace,
-                        paper_id,
-                        "reproduction",
-                        "knowledge/reproductions",
-                        "复现计划",
-                    ),
-                },
+                "status": _paper_status(memory, cards),
+                "cards": cards,
             }
         )
 
@@ -308,14 +398,55 @@ def export_web_workbench_data(workspace: Path) -> Path:
         for index, path in enumerate(sorted((workspace / "knowledge/innovations").glob("*.md")))
     ]
     payload = {
+        "schemaVersion": WEB_SCHEMA_VERSION,
         "generatedAt": int(time.time()),
         "workspace": str(workspace),
         "papers": papers_payload,
         "innovations": innovations_payload,
     }
-    data_path = public_dir / "paper-workbench-data.json"
+    data_path = public_dir / WEB_DATA_FILENAME
     write_json(data_path, payload)
     return data_path
+
+
+def validate_web_release(workspace: Path) -> dict[str, Any]:
+    web_dir = web_workbench_dir(workspace)
+    errors: list[str] = []
+    if not web_dir.exists():
+        return {"ok": False, "errors": [f"missing web dir: {web_dir}"], "web_dir": str(web_dir)}
+
+    for relative in WEB_FORBIDDEN_FILES:
+        if (web_dir / relative).exists():
+            errors.append(f"forbidden file exists: {relative}")
+
+    for path in web_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(part in {"node_modules", "dist", ".vite"} for part in path.relative_to(web_dir).parts):
+            continue
+        if path.suffix in {".ts", ".tsx", ".js", ".mjs", ".json"}:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for pattern in WEB_FORBIDDEN_PATTERNS:
+                if pattern in text:
+                    errors.append(f"forbidden pattern {pattern!r} in {path.relative_to(web_dir)}")
+
+    data_path = web_dir / "public" / WEB_DATA_FILENAME
+    if not data_path.exists():
+        errors.append(f"missing public/{WEB_DATA_FILENAME}")
+    else:
+        try:
+            data = read_json(data_path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"invalid JSON in public/{WEB_DATA_FILENAME}: {exc}")
+        else:
+            if data.get("schemaVersion") != WEB_SCHEMA_VERSION:
+                errors.append("invalid or missing schemaVersion")
+            if not isinstance(data.get("papers"), list):
+                errors.append("papers must be list")
+            if not isinstance(data.get("innovations"), list):
+                errors.append("innovations must be list")
+
+    return {"ok": not errors, "errors": errors, "web_dir": str(web_dir), "data_path": str(data_path)}
 
 
 def _template_memory() -> dict[str, Any]:
@@ -507,7 +638,9 @@ def web_workbench_status(workspace: Path) -> dict[str, Any]:
 
 
 def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0.1") -> dict[str, Any]:
-    setup_workspace(workspace)
+    if not web_workbench_dir(workspace).exists():
+        release_web_workbench(workspace, force=False)
+    export_web_workbench_data(workspace)
     status = web_workbench_status(workspace)
     if status.get("running"):
         return {"ok": True, **status}
@@ -571,22 +704,35 @@ def run_web_workbench(
     port: int = 5173,
     host: str = "127.0.0.1",
     log_lines: int = 80,
+    force_release: bool = False,
+    backup: bool = True,
 ) -> dict[str, Any]:
     resolved_workspace = resolve_workspace(workspace)
     if command == "start":
         return _start_web_workbench(resolved_workspace, port=port, host=host)
     if command == "status":
-        data_path = export_web_workbench_data(resolved_workspace)
-        return {"ok": True, "data_path": str(data_path), **web_workbench_status(resolved_workspace)}
+        data_path = web_workbench_dir(resolved_workspace) / "public" / WEB_DATA_FILENAME
+        return {"ok": True, "data_path": str(data_path), "data_exists": data_path.exists(), **web_workbench_status(resolved_workspace)}
     if command == "stop":
         return _stop_web_workbench(resolved_workspace)
     if command == "logs":
         return _web_workbench_logs(resolved_workspace, log_lines)
+    if command == "release":
+        web_dir = release_web_workbench(resolved_workspace, force=force_release, backup=backup)
+        data_path = export_web_workbench_data(resolved_workspace)
+        return {"ok": True, "web_dir": str(web_dir), "data_path": str(data_path)}
     if command == "refresh-data":
         data_path = export_web_workbench_data(resolved_workspace)
         return {"ok": True, "data_path": str(data_path), "web_dir": str(web_workbench_dir(resolved_workspace))}
+    if command == "validate-release":
+        if not web_workbench_dir(resolved_workspace).exists():
+            release_web_workbench(resolved_workspace, force=False)
+        export_web_workbench_data(resolved_workspace)
+        return validate_web_release(resolved_workspace)
 
-    setup_workspace(resolved_workspace)
+    if not web_workbench_dir(resolved_workspace).exists():
+        release_web_workbench(resolved_workspace, force=False)
+    export_web_workbench_data(resolved_workspace)
     web_dir = web_workbench_dir(resolved_workspace)
     if not (web_dir / "package.json").exists():
         return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
@@ -644,13 +790,27 @@ def main() -> int:
     web_parser = subparsers.add_parser("web")
     web_parser.add_argument(
         "--web-command",
-        choices=["dev", "build", "test", "preview", "start", "status", "stop", "logs", "refresh-data"],
+        choices=[
+            "dev",
+            "build",
+            "test",
+            "preview",
+            "start",
+            "status",
+            "stop",
+            "logs",
+            "release",
+            "refresh-data",
+            "validate-release",
+        ],
         default="dev",
     )
     web_parser.add_argument("--port", type=int, default=5173)
     web_parser.add_argument("--host", default="127.0.0.1")
     web_parser.add_argument("--log-lines", type=int, default=80)
     web_parser.add_argument("--workspace", type=Path, default=None)
+    web_parser.add_argument("--force-release", action="store_true")
+    web_parser.add_argument("--no-backup", action="store_true")
 
     args = parser.parse_args()
 
@@ -717,6 +877,8 @@ def main() -> int:
             port=args.port,
             host=args.host,
             log_lines=args.log_lines,
+            force_release=args.force_release,
+            backup=not args.no_backup,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result["ok"] else 1

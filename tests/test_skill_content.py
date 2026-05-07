@@ -155,6 +155,7 @@ def test_web_workbench_child_skill_describes_service_lifecycle():
     assert "<workspace>/web" in text
     assert "target workspace" in text
     assert "refresh-data" in text
+    assert "validate-release" in text
     assert "paper-workbench-data.json" in text
     assert "hot-read" in text
 

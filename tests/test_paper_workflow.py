@@ -16,6 +16,7 @@ from paper_workflow import (  # noqa: E402
     local_mineru_status,
     release_web_workbench,
     run_web_workbench,
+    validate_web_release,
     web_workbench_dir,
     web_workbench_status,
     save_default_workspace,
@@ -212,7 +213,7 @@ def test_release_web_workbench_copies_template_to_workspace(tmp_path):
     assert web_workbench_dir(workspace) == target
 
 
-def test_release_web_workbench_syncs_template_updates_without_runtime_dirs(tmp_path):
+def test_release_web_workbench_does_not_merge_stale_files_by_default(tmp_path):
     workspace = tmp_path / "paper-library"
     target = release_web_workbench(workspace)
     stale_file = target / "src/workbenchData.ts"
@@ -223,8 +224,24 @@ def test_release_web_workbench_syncs_template_updates_without_runtime_dirs(tmp_p
 
     release_web_workbench(workspace)
 
-    assert "WORKBENCH_DATA_URL" in stale_file.read_text(encoding="utf-8")
+    assert stale_file.read_text(encoding="utf-8") == "stale"
     assert runtime_file.read_text(encoding="utf-8") == "keep"
+
+
+def test_release_web_workbench_force_replaces_old_web_and_backs_it_up(tmp_path):
+    workspace = tmp_path / "paper-library"
+    target = release_web_workbench(workspace)
+    stale_file = target / "src/stale-sampleData.ts"
+    stale_file.write_text("stale", encoding="utf-8")
+
+    released = release_web_workbench(workspace, force=True)
+
+    backups = sorted(workspace.glob("web.backup-*"))
+    assert released == target
+    assert backups
+    assert not stale_file.exists()
+    assert (backups[0] / "src/stale-sampleData.ts").is_file()
+    assert (target / "src/workbenchData.ts").is_file()
 
 
 def test_export_web_workbench_data_writes_hot_json_from_workspace(tmp_path):
@@ -242,7 +259,11 @@ def test_export_web_workbench_data_writes_hot_json_from_workspace(tmp_path):
     }
     memory_path = workspace / "knowledge/papers/paper-1.json"
     memory_path.write_text(json.dumps(memory), encoding="utf-8")
-    (workspace / "knowledge/cards/paper-1.md").write_text("# 通俗解释\n\n核心直觉 A\n\n- 要点一\n- 要点二\n", encoding="utf-8")
+    (workspace / "knowledge/cards/paper-1.md").write_text(
+        "---\ntitle: metadata title\nsource_papers:\n  - \"2017-mixture-differential-cryptanalysis-ef13b0\"\n---\n"
+        "# 通俗解释\n\n核心直觉 A\n\n- 要点一\n- 要点二\n",
+        encoding="utf-8",
+    )
     (workspace / "knowledge/expert-readings/paper-1.md").write_text("# 专家阅读\n\n实验缺陷 B\n", encoding="utf-8")
     (workspace / "knowledge/reproductions/paper-1.md").write_text("# 复现计划\n\n先做最小实验 C\n", encoding="utf-8")
     (workspace / "knowledge/innovations/idea-1.md").write_text(
@@ -254,12 +275,18 @@ def test_export_web_workbench_data_writes_hot_json_from_workspace(tmp_path):
     payload = json.loads(data_path.read_text(encoding="utf-8"))
 
     assert data_path == workspace / "web/public/paper-workbench-data.json"
+    assert payload["schemaVersion"] == 1
     assert payload["papers"][0]["id"] == "paper-1"
     assert payload["papers"][0]["category"] == "差分论文"
+    assert payload["papers"][0]["status"] == "complete"
     assert payload["papers"][0]["cards"]["plain"]["summary"].startswith("核心直觉")
+    assert not payload["papers"][0]["cards"]["plain"]["summary"].startswith("---")
+    assert "2017-mixture-differential-cryptanalysis-ef13b0" not in payload["papers"][0]["cards"]["plain"]["bullets"]
+    assert payload["papers"][0]["cards"]["plain"]["status"] == "ready"
     assert payload["papers"][0]["cards"]["plain"]["markdown"].startswith("# 通俗解释")
     assert "先做最小实验 C" in payload["papers"][0]["cards"]["reproduction"]["markdown"]
     assert payload["innovations"][0]["score"] == 88
+    assert payload["innovations"][0]["markdown"].startswith("# 新想法")
 
 
 def test_run_web_workbench_refresh_data_command_writes_hot_json(tmp_path):
@@ -269,3 +296,33 @@ def test_run_web_workbench_refresh_data_command_writes_hot_json(tmp_path):
     assert result["ok"] is True
     assert result["data_path"] == str(workspace / "web/public/paper-workbench-data.json")
     assert (workspace / "web/public/paper-workbench-data.json").is_file()
+
+
+def test_run_web_workbench_release_force_and_validate_release(tmp_path):
+    workspace = tmp_path / "paper-library"
+    setup_workspace(workspace)
+    stale_file = workspace / "web/src/sampleData.ts"
+    stale_file.write_text("export const sampleWorkbenchData = {};", encoding="utf-8")
+
+    invalid = validate_web_release(workspace)
+    assert invalid["ok"] is False
+    assert any("sampleData.ts" in error for error in invalid["errors"])
+
+    release = run_web_workbench("release", workspace=workspace, force_release=True)
+    validation = run_web_workbench("validate-release", workspace=workspace)
+
+    assert release["ok"] is True
+    assert validation["ok"] is True
+    assert not stale_file.exists()
+
+
+def test_validate_web_release_reports_invalid_json_without_crashing(tmp_path):
+    workspace = tmp_path / "paper-library"
+    setup_workspace(workspace)
+    data_path = workspace / "web/public/paper-workbench-data.json"
+    data_path.write_text("", encoding="utf-8")
+
+    result = validate_web_release(workspace)
+
+    assert result["ok"] is False
+    assert any("invalid JSON" in error for error in result["errors"])
