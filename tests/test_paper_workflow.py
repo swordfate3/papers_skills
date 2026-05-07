@@ -257,6 +257,8 @@ def test_export_web_workbench_data_writes_hot_json_from_workspace(tmp_path):
     assert payload["papers"][0]["id"] == "paper-1"
     assert payload["papers"][0]["category"] == "差分论文"
     assert payload["papers"][0]["cards"]["plain"]["summary"].startswith("核心直觉")
+    assert payload["papers"][0]["cards"]["plain"]["markdown"].startswith("# 通俗解释")
+    assert "先做最小实验 C" in payload["papers"][0]["cards"]["reproduction"]["markdown"]
     assert payload["innovations"][0]["score"] == 88
 
 

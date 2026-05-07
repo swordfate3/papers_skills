@@ -120,9 +120,9 @@ workspace/state/papers.json
 
 This skill also bundles a React/Vite visual workbench template in `web/`. During first workspace setup, copy it into the user's selected paper workspace at `<workspace>/web`; run npm install, npm run dev, service state, and logs in that target workspace copy, not in the installed skill directory.
 
-Setup and Web maintenance commands export live workspace data to `<workspace>/web/public/paper-workbench-data.json`. The running React app hot-reads this JSON every 5 seconds, so the visualizer reflects real workspace papers, categories, reading artifacts, reproduction plans, and innovations instead of only bundled sample data. Re-running setup also syncs updated template source files into `<workspace>/web` while preserving runtime directories such as `node_modules`, `dist`, and `.vite`.
+Setup and Web maintenance commands export live workspace data to `<workspace>/web/public/paper-workbench-data.json`. The running React app hot-reads this JSON every 5 seconds, so the visualizer reflects real workspace papers, categories, full Markdown reading artifacts, reproduction plans, and innovations instead of only bundled sample data. Re-running setup also syncs updated template source files into `<workspace>/web` while preserving runtime directories such as `node_modules`, `dist`, and `.vite`.
 
-The workbench presents category navigation on the left and three reading cards on the right: `通俗易懂`, `专家阅读`, and `复现计划`. Each card includes a platform request box for `Codex`, `Claude Code`, or `OpenClaw`, producing a structured prompt that asks the selected platform to refine that part of the workflow and save a new version unless the user explicitly requests overwrite.
+The workbench presents category navigation on the left and reading entry buttons on the right: `通俗易懂`, `专家阅读`, and `复现计划`. Clicking an entry opens the built-in Markdown document reader for the full generated `.md` artifact. The reader includes a platform request box for `Codex`, `Claude Code`, or `OpenClaw`, producing a structured prompt that asks the selected platform to refine that part of the workflow and save a new version unless the user explicitly requests overwrite.
 
 The `创新挖掘` view shows ranked innovation ideas, scores, and source links back to the specific papers and reading cards that inspired the idea.
 

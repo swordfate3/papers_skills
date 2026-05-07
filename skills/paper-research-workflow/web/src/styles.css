@@ -52,6 +52,7 @@ button {
 .search-box svg,
 .card-icon svg,
 .card-chat button svg,
+.document-toolbar button svg,
 .source-list svg {
   width: 20px;
   height: 20px;
@@ -161,25 +162,55 @@ button {
   color: #64736f;
 }
 
-.reading-grid {
+.reading-entry-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  align-items: start;
+  gap: 12px;
+  max-width: 980px;
 }
 
-.reading-card,
+.reading-entry-button,
 .innovation-card {
   border: 1px solid #d8dfdc;
   border-radius: 8px;
   background: #ffffff;
 }
 
-.reading-card {
+.reading-entry-button {
   display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
   gap: 14px;
-  min-width: 0;
-  padding: 16px;
+  align-items: center;
+  min-height: 104px;
+  padding: 14px;
+  color: #20302c;
+  text-align: left;
+}
+
+.reading-entry-button:hover,
+.reading-entry-button:focus-visible {
+  border-color: #26715f;
+  box-shadow: inset 0 0 0 1px #26715f;
+}
+
+.reading-entry-button > span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+}
+
+.reading-entry-button small {
+  color: #26715f;
+  font-size: 12px;
+}
+
+.reading-entry-button strong {
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.reading-entry-button em {
+  color: #52625e;
+  font-style: normal;
+  line-height: 1.55;
 }
 
 .card-header {
@@ -199,7 +230,6 @@ button {
   background: #dcefe8;
 }
 
-.reading-card h3,
 .innovation-card h3 {
   margin: 0;
   font-size: 17px;
@@ -207,7 +237,6 @@ button {
   letter-spacing: 0;
 }
 
-.card-summary,
 .innovation-card p {
   margin: 0;
   color: #40524c;
@@ -243,8 +272,6 @@ code {
 .card-chat {
   display: grid;
   gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid #e5ebe8;
 }
 
 .card-chat label {
@@ -298,6 +325,154 @@ code {
   white-space: pre-wrap;
   color: #10221d;
   background: #dcefe8;
+}
+
+.document-view {
+  display: grid;
+  gap: 16px;
+  max-width: 1040px;
+}
+
+.document-toolbar {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.document-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #276756;
+}
+
+.document-toolbar p,
+.document-toolbar h3 {
+  margin: 0;
+}
+
+.document-toolbar p {
+  color: #64736f;
+  font-size: 12px;
+}
+
+.document-toolbar h3 {
+  margin-top: 3px;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: #64736f;
+  font-size: 12px;
+}
+
+.document-meta > span {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #dce9e4;
+}
+
+.document-meta code {
+  flex: 1 1 320px;
+}
+
+.markdown-reader,
+.reader-action-panel {
+  border: 1px solid #d8dfdc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.markdown-reader {
+  padding: 24px;
+  line-height: 1.75;
+}
+
+.markdown-reader h1,
+.markdown-reader h2,
+.markdown-reader h3,
+.markdown-reader p,
+.markdown-reader ul,
+.markdown-reader blockquote,
+.markdown-reader table,
+.markdown-reader pre {
+  margin-top: 0;
+}
+
+.markdown-reader h1 {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.markdown-reader h2 {
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.markdown-reader h3 {
+  font-size: 18px;
+}
+
+.markdown-reader p,
+.markdown-reader li,
+.markdown-reader blockquote {
+  color: #2d3c37;
+}
+
+.markdown-reader blockquote {
+  margin-left: 0;
+  padding: 10px 14px;
+  border-left: 4px solid #72aa99;
+  background: #eef3f1;
+}
+
+.markdown-reader table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+.markdown-reader th,
+.markdown-reader td {
+  padding: 8px 10px;
+  border: 1px solid #d8dfdc;
+  text-align: left;
+}
+
+.markdown-reader th {
+  background: #eef3f1;
+}
+
+.md-code-block {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: #10221d;
+}
+
+.md-code-block code {
+  padding: 0;
+  color: #e8f5ef;
+  background: transparent;
+}
+
+.md-space {
+  height: 8px;
+}
+
+.reader-action-panel {
+  padding: 16px;
 }
 
 .innovation-board {
@@ -382,8 +557,8 @@ code {
 }
 
 @media (max-width: 1180px) {
-  .reading-grid {
-    grid-template-columns: 1fr;
+  .reading-entry-board {
+    max-width: none;
   }
 }
 
@@ -411,5 +586,13 @@ code {
 
   .innovation-card {
     grid-template-columns: 1fr;
+  }
+
+  .document-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .markdown-reader {
+    padding: 16px;
   }
 }

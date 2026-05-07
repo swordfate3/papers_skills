@@ -1,9 +1,10 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
-import { BookOpen, Brain, Code2, Lightbulb, MessageSquare, Network, Search } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, Code2, FileText, Lightbulb, MessageSquare, Network, Search } from "lucide-react";
 import { InnovationIdea, Paper, Platform, ReadingCard, ReadingKind, WorkbenchData, readingKindLabels } from "./domain";
 import { sampleWorkbenchData } from "./sampleData";
 import { buildPlatformPrompt } from "./promptBuilder";
 import { WORKBENCH_POLL_INTERVAL_MS, dataOrSample, loadWorkbenchData } from "./workbenchData";
+import { MarkdownReader } from "./MarkdownReader";
 
 const cardIcons: Record<ReadingKind, ReactNode> = {
   plain: <BookOpen aria-hidden="true" />,
@@ -26,7 +27,7 @@ function EmptyWorkspace({ workspace }: { workspace: string }) {
   );
 }
 
-function ReadingPanel({
+function PlatformRequestBox({
   paper,
   card
 }: {
@@ -44,29 +45,7 @@ function ReadingPanel({
   }
 
   return (
-    <article className="reading-card" aria-label={readingKindLabels[card.kind]}>
-      <header className="card-header">
-        <span className="card-icon">{cardIcons[card.kind]}</span>
-        <div>
-          <p className="card-kicker">{readingKindLabels[card.kind]}</p>
-          <h3>{card.title}</h3>
-        </div>
-      </header>
-
-      <p className="card-summary">{card.summary}</p>
-
-      <ul className="insight-list">
-        {card.bullets.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <div className="artifact-line">
-        <span>{card.version}</span>
-        <span>{card.updatedAt}</span>
-      </div>
-      <code>{card.artifactPath}</code>
-
+    <section className="reader-action-panel">
       <form className="card-chat" onSubmit={submit}>
         <label>
           平台
@@ -95,6 +74,66 @@ function ReadingPanel({
           {prompt}
         </pre>
       )}
+    </section>
+  );
+}
+
+function ReadingEntryBoard({
+  paper,
+  onOpen
+}: {
+  paper: Paper;
+  onOpen: (kind: ReadingKind) => void;
+}) {
+  return (
+    <section className="reading-entry-board" aria-label="阅读入口">
+      {(["plain", "expert", "reproduction"] as ReadingKind[]).map((kind) => {
+        const card = paper.cards[kind];
+        return (
+          <button key={kind} type="button" className="reading-entry-button" onClick={() => onOpen(kind)}>
+            <span className="card-icon">{cardIcons[kind]}</span>
+            <span>
+              <small>{readingKindLabels[kind]}</small>
+              <strong>{card.title}</strong>
+              <em>{card.summary}</em>
+            </span>
+            <FileText aria-hidden="true" />
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+function DocumentReaderView({
+  paper,
+  card,
+  onBack
+}: {
+  paper: Paper;
+  card: ReadingCard;
+  onBack: () => void;
+}) {
+  const markdown = card.markdown?.trim() || `# ${card.title}\n\n${card.summary}\n\n${card.bullets.map((item) => `- ${item}`).join("\n")}`;
+  return (
+    <article className="document-view">
+      <header className="document-toolbar">
+        <button type="button" onClick={onBack}>
+          <ArrowLeft aria-hidden="true" />
+          返回论文详情
+        </button>
+        <div>
+          <p>{paper.title}</p>
+          <h3>{readingKindLabels[card.kind]}：{card.title}</h3>
+        </div>
+      </header>
+      <div className="document-meta">
+        <span>{card.version}</span>
+        <span>{card.updatedAt || "等待生成"}</span>
+        <code>{card.artifactPath}</code>
+      </div>
+      <MarkdownReader markdown={markdown} />
+      <PlatformRequestBox paper={paper} card={card} />
     </article>
   );
 }
@@ -106,7 +145,7 @@ function InnovationBoard({
 }: {
   ideas: InnovationIdea[];
   papersById: Map<string, Paper>;
-  onSelectPaper: (paper: Paper) => void;
+  onSelectPaper: (paper: Paper, kind?: ReadingKind) => void;
 }) {
   return (
     <section className="innovation-board" aria-label="创新挖掘">
@@ -127,7 +166,7 @@ function InnovationBoard({
                   <button
                     key={`${source.paperId}-${source.cardKind}`}
                     type="button"
-                    onClick={() => paper && onSelectPaper(paper)}
+                    onClick={() => paper && onSelectPaper(paper, source.cardKind)}
                   >
                     <Network aria-hidden="true" />
                     <span>{paper?.title ?? source.paperId}</span>
@@ -149,6 +188,7 @@ export default function App() {
   const [hasLoadedWorkspaceData, setHasLoadedWorkspaceData] = useState(false);
   const [activeCategory, setActiveCategory] = useState("全部论文");
   const [selectedPaperId, setSelectedPaperId] = useState(sampleWorkbenchData.papers[0].id);
+  const [activeReaderKind, setActiveReaderKind] = useState<ReadingKind | null>(null);
   const displayData = useMemo(
     () => (hasLoadedWorkspaceData ? liveData : dataOrSample(liveData)),
     [hasLoadedWorkspaceData, liveData]
@@ -195,6 +235,7 @@ export default function App() {
   useEffect(() => {
     if (!papersById.has(selectedPaperId) && papers[0]) {
       setSelectedPaperId(papers[0].id);
+      setActiveReaderKind(null);
     }
   }, [papers, papersById, selectedPaperId]);
 
@@ -204,9 +245,10 @@ export default function App() {
     }
   }, [activeCategory, categories]);
 
-  function selectPaper(paper: Paper) {
+  function selectPaper(paper: Paper, kind?: ReadingKind) {
     setSelectedPaperId(paper.id);
     setActiveCategory(paper.category);
+    setActiveReaderKind(kind ?? null);
   }
 
   return (
@@ -229,7 +271,10 @@ export default function App() {
               key={category}
               type="button"
               className={category === activeCategory ? "active" : ""}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => {
+                setActiveCategory(category);
+                setActiveReaderKind(null);
+              }}
             >
               {category}
             </button>
@@ -250,6 +295,12 @@ export default function App() {
           <EmptyWorkspace workspace={liveData.workspace} />
         ) : activeCategory === "创新挖掘" ? (
           <InnovationBoard ideas={innovations} papersById={papersById} onSelectPaper={selectPaper} />
+        ) : selectedPaper && activeReaderKind ? (
+          <DocumentReaderView
+            paper={selectedPaper}
+            card={selectedPaper.cards[activeReaderKind]}
+            onBack={() => setActiveReaderKind(null)}
+          />
         ) : (
           <>
             <div className="paper-strip" aria-label="分类论文">
@@ -258,7 +309,10 @@ export default function App() {
                   key={paper.id}
                   type="button"
                   className={paper.id === selectedPaper.id ? "selected" : ""}
-                  onClick={() => setSelectedPaperId(paper.id)}
+                  onClick={() => {
+                    setSelectedPaperId(paper.id);
+                    setActiveReaderKind(null);
+                  }}
                 >
                   <strong>{paper.title}</strong>
                   <span>{paper.year} · {paper.tags.join(" / ")}</span>
@@ -266,11 +320,7 @@ export default function App() {
               ))}
             </div>
 
-            <section className="reading-grid" aria-label="三列阅读卡">
-              {selectedPaper && (["plain", "expert", "reproduction"] as ReadingKind[]).map((kind) => (
-                <ReadingPanel key={kind} paper={selectedPaper} card={selectedPaper.cards[kind]} />
-              ))}
-            </section>
+            {selectedPaper && <ReadingEntryBoard paper={selectedPaper} onOpen={setActiveReaderKind} />}
           </>
         )}
       </section>

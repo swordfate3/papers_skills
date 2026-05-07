@@ -209,6 +209,7 @@ def _reading_card_from_markdown(
             "summary": "暂无内容，等待对应阅读流程生成。",
             "bullets": ["可以在卡片底部请求平台生成该阅读产物。"],
             "artifactPath": str(workspace / directory / f"{paper_id}.md"),
+            "markdown": "",
         }
     markdown = path.read_text(encoding="utf-8", errors="replace")
     return {
@@ -219,6 +220,7 @@ def _reading_card_from_markdown(
         "summary": _first_paragraph(markdown),
         "bullets": _bullet_points(markdown),
         "artifactPath": str(path),
+        "markdown": markdown,
     }
 
 

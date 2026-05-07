@@ -168,4 +168,5 @@ def test_visual_workflow_diagram_includes_web_workbench_lifecycle():
     assert "web --web-command stop" in text
     assert "web --web-command refresh-data" in text
     assert "paper-workbench-data.json" in text
-    assert "三列阅读卡" in text
+    assert "阅读入口" in text
+    assert "Markdown 文档阅读器" in text

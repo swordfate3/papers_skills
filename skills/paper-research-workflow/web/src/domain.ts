@@ -10,6 +10,7 @@ export interface ReadingCard {
   summary: string;
   bullets: string[];
   artifactPath: string;
+  markdown?: string;
 }
 
 export interface Paper {

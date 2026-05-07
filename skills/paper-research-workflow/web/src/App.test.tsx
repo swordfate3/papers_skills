@@ -10,13 +10,14 @@ describe("Paper research workbench", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders category navigation and three reading cards", () => {
+  it("renders category navigation and reading document entry buttons", () => {
     render(<App />);
 
     expect(screen.getByRole("navigation")).toHaveTextContent("差分论文");
-    expect(screen.getByLabelText("通俗易懂")).toBeInTheDocument();
-    expect(screen.getByLabelText("专家阅读")).toBeInTheDocument();
-    expect(screen.getByLabelText("复现计划")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /通俗易懂/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /专家阅读/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /复现计划/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText("三列阅读卡")).not.toBeInTheDocument();
   });
 
   it("filters papers by category", async () => {
@@ -37,18 +38,30 @@ describe("Paper research workbench", () => {
     await user.click(screen.getByRole("button", { name: /Integral Operator Learning/ }));
 
     expect(screen.getByRole("heading", { name: "Integral Operator Learning for Scientific Simulation" })).toBeInTheDocument();
-    expect(screen.getByLabelText("通俗易懂")).toHaveTextContent("连续版神经网络");
+    await user.click(screen.getByRole("button", { name: /通俗易懂/ }));
+    expect(screen.getByLabelText("Markdown 文档阅读器")).toHaveTextContent("连续版神经网络");
   });
 
   it("generates platform prompts from card chat input", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getAllByLabelText("优化请求")[0], "请把通俗解释讲得更细");
-    await user.click(screen.getAllByRole("button", { name: /生成平台请求/ })[0]);
+    await user.click(screen.getByRole("button", { name: /通俗易懂/ }));
+    await user.type(screen.getByLabelText("优化请求"), "请把通俗解释讲得更细");
+    await user.click(screen.getByRole("button", { name: /生成平台请求/ }));
 
     expect(screen.getByLabelText("通俗易懂平台请求")).toHaveTextContent("请把通俗解释讲得更细");
     expect(screen.getByLabelText("通俗易懂平台请求")).toHaveTextContent("Codex");
+  });
+
+  it("opens a full markdown document reader from a reading entry", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /专家阅读/ }));
+
+    expect(screen.getByLabelText("Markdown 文档阅读器")).toHaveTextContent("机制、证据与可疑点");
+    expect(screen.getByRole("button", { name: "返回论文详情" })).toBeInTheDocument();
   });
 
   it("replaces sample papers with hot workspace data", async () => {
@@ -73,7 +86,8 @@ describe("Paper research workbench", () => {
                 updatedAt: "2026-05-07",
                 summary: "这是从工作区 JSON 热读取出来的解释。",
                 bullets: ["热读取成功"],
-                artifactPath: "/tmp/live-paper-library/knowledge/cards/live-paper-1.md"
+                artifactPath: "/tmp/live-paper-library/knowledge/cards/live-paper-1.md",
+                markdown: "# 实时通俗解释\n\n这是完整文档内容。"
               },
               expert: {
                 kind: "expert",
@@ -82,7 +96,8 @@ describe("Paper research workbench", () => {
                 updatedAt: "2026-05-07",
                 summary: "专家卡来自工作区。",
                 bullets: ["检查真实数据"],
-                artifactPath: "/tmp/live-paper-library/knowledge/expert-readings/live-paper-1.md"
+                artifactPath: "/tmp/live-paper-library/knowledge/expert-readings/live-paper-1.md",
+                markdown: "# 实时专家阅读\n\n专家卡来自工作区。"
               },
               reproduction: {
                 kind: "reproduction",
@@ -91,7 +106,8 @@ describe("Paper research workbench", () => {
                 updatedAt: "2026-05-07",
                 summary: "复现卡来自工作区。",
                 bullets: ["运行最小实验"],
-                artifactPath: "/tmp/live-paper-library/knowledge/reproductions/live-paper-1.md"
+                artifactPath: "/tmp/live-paper-library/knowledge/reproductions/live-paper-1.md",
+                markdown: "# 实时复现计划\n\n复现卡来自工作区。"
               }
             }
           }
