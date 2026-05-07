@@ -154,3 +154,13 @@ def test_web_workbench_child_skill_describes_service_lifecycle():
         assert word in text
     assert "<workspace>/web" in text
     assert "target workspace" in text
+
+
+def test_visual_workflow_diagram_includes_web_workbench_lifecycle():
+    text = (ROOT / "docs/论文研究技能可视化工作流.md").read_text(encoding="utf-8")
+    assert "<workspace>/web" in text
+    assert "web --web-command start" in text
+    assert "web --web-command status" in text
+    assert "web --web-command logs" in text
+    assert "web --web-command stop" in text
+    assert "三列阅读卡" in text
