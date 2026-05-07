@@ -1,7 +1,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BookOpen, Brain, Code2, FileText, Lightbulb, MessageSquare, Network, Search } from "lucide-react";
 import { InnovationIdea, Paper, Platform, ReadingCard, ReadingKind, WorkbenchData, readingKindLabels } from "./domain";
-import { buildPlatformPrompt } from "./promptBuilder";
+import { buildInnovationPlatformPrompt, buildPlatformPrompt } from "./promptBuilder";
 import { WORKBENCH_POLL_INTERVAL_MS, emptyWorkbenchData, loadWorkbenchData } from "./workbenchData";
 import { MarkdownReader } from "./MarkdownReader";
 
@@ -78,6 +78,51 @@ function PlatformRequestBox({
   );
 }
 
+function InnovationRequestBox({ idea }: { idea: InnovationIdea }) {
+  const [platform, setPlatform] = useState<Platform>("Codex");
+  const [message, setMessage] = useState("");
+  const [prompt, setPrompt] = useState("");
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanMessage = message.trim() || "请基于当前知识库继续优化这个创新点，并重新给出合理性排序。";
+    setPrompt(buildInnovationPlatformPrompt({ platform, idea, message: cleanMessage }));
+  }
+
+  return (
+    <section className="reader-action-panel">
+      <form className="card-chat" onSubmit={submit}>
+        <label>
+          平台
+          <select value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}>
+            {platforms.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          优化请求
+          <textarea
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder="继续挖掘这个创新点，补充可行性、风险和与知识库论文的关系"
+          />
+        </label>
+        <button type="submit">
+          <MessageSquare aria-hidden="true" />
+          生成平台请求
+        </button>
+      </form>
+
+      {prompt && (
+        <pre className="prompt-preview" aria-label="创新挖掘平台请求">
+          {prompt}
+        </pre>
+      )}
+    </section>
+  );
+}
+
 function ReadingEntryBoard({
   paper,
   onOpen
@@ -138,14 +183,69 @@ function DocumentReaderView({
   );
 }
 
+function InnovationReaderView({
+  idea,
+  papersById,
+  onBack,
+  onSelectPaper
+}: {
+  idea: InnovationIdea;
+  papersById: Map<string, Paper>;
+  onBack: () => void;
+  onSelectPaper: (paper: Paper, kind?: ReadingKind) => void;
+}) {
+  const markdown = idea.markdown?.trim() || `# ${idea.title}\n\n${idea.summary}`;
+  return (
+    <article className="document-view">
+      <header className="document-toolbar">
+        <button type="button" onClick={onBack}>
+          <ArrowLeft aria-hidden="true" />
+          返回创新挖掘
+        </button>
+        <div>
+          <p>合理性分数 {idea.score} · 排名 #{idea.rank}</p>
+          <h3>创新挖掘：{idea.title}</h3>
+        </div>
+      </header>
+      <div className="document-meta">
+        <span>score {idea.score}</span>
+        <span>rank #{idea.rank}</span>
+        <code>{idea.artifactPath}</code>
+      </div>
+      <MarkdownReader markdown={markdown} />
+      <section className="reader-action-panel" aria-label="创新来源">
+        <div className="source-list">
+          {idea.sources.map((source) => {
+            const paper = papersById.get(source.paperId);
+            return (
+              <button
+                key={`${source.paperId}-${source.cardKind}`}
+                type="button"
+                onClick={() => paper && onSelectPaper(paper, source.cardKind)}
+              >
+                <Network aria-hidden="true" />
+                <span>{paper?.title ?? source.paperId}</span>
+                <small>{readingKindLabels[source.cardKind]}：{source.note}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <InnovationRequestBox idea={idea} />
+    </article>
+  );
+}
+
 function InnovationBoard({
   ideas,
   papersById,
-  onSelectPaper
+  onSelectPaper,
+  onOpenIdea
 }: {
   ideas: InnovationIdea[];
   papersById: Map<string, Paper>;
   onSelectPaper: (paper: Paper, kind?: ReadingKind) => void;
+  onOpenIdea: (idea: InnovationIdea) => void;
 }) {
   return (
     <section className="innovation-board" aria-label="创新挖掘">
@@ -159,6 +259,10 @@ function InnovationBoard({
               <span>合理性分数</span>
               <strong>{idea.score}</strong>
             </div>
+            <button className="open-innovation-button" type="button" onClick={() => onOpenIdea(idea)}>
+              <FileText aria-hidden="true" />
+              阅读创新文档
+            </button>
             <div className="source-list">
               {idea.sources.map((source) => {
                 const paper = papersById.get(source.paperId);
@@ -190,6 +294,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState("全部论文");
   const [selectedPaperId, setSelectedPaperId] = useState("");
   const [activeReaderKind, setActiveReaderKind] = useState<ReadingKind | null>(null);
+  const [activeInnovationId, setActiveInnovationId] = useState("");
   const papers = liveData.papers;
   const innovations = liveData.innovations;
   const hasRealWorkspaceContent = hasLoadedWorkspaceData && (liveData.papers.length > 0 || liveData.innovations.length > 0);
@@ -199,6 +304,7 @@ export default function App() {
     ? papers
     : papers.filter((paper) => paper.category === activeCategory);
   const currentPaper = papersById.get(selectedPaperId);
+  const activeInnovation = innovations.find((idea) => idea.id === activeInnovationId);
   const selectedPaper =
     currentPaper && filteredPapers.some((paper) => paper.id === currentPaper.id)
       ? currentPaper
@@ -279,6 +385,7 @@ export default function App() {
               onClick={() => {
                 setActiveCategory(category);
                 setActiveReaderKind(null);
+                setActiveInnovationId("");
               }}
             >
               {category}
@@ -298,8 +405,26 @@ export default function App() {
 
         {!hasRealWorkspaceContent && hasLoadedWorkspaceData ? (
           <EmptyWorkspace workspace={liveData.workspace} error={loadError} />
+        ) : activeCategory === "创新挖掘" && activeInnovation ? (
+          <InnovationReaderView
+            idea={activeInnovation}
+            papersById={papersById}
+            onBack={() => setActiveInnovationId("")}
+            onSelectPaper={(paper, kind) => {
+              setActiveInnovationId("");
+              selectPaper(paper, kind);
+            }}
+          />
         ) : activeCategory === "创新挖掘" ? (
-          <InnovationBoard ideas={innovations} papersById={papersById} onSelectPaper={selectPaper} />
+          <InnovationBoard
+            ideas={innovations}
+            papersById={papersById}
+            onSelectPaper={(paper, kind) => {
+              setActiveInnovationId("");
+              selectPaper(paper, kind);
+            }}
+            onOpenIdea={(idea) => setActiveInnovationId(idea.id)}
+          />
         ) : selectedPaper && activeReaderKind ? (
           <DocumentReaderView
             paper={selectedPaper}
@@ -317,6 +442,7 @@ export default function App() {
                   onClick={() => {
                     setSelectedPaperId(paper.id);
                     setActiveReaderKind(null);
+                    setActiveInnovationId("");
                   }}
                 >
                   <strong>{paper.title}</strong>

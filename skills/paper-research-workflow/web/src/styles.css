@@ -302,6 +302,7 @@ code {
 }
 
 .card-chat button,
+.open-innovation-button,
 .source-list button {
   display: inline-flex;
   align-items: center;
@@ -313,6 +314,14 @@ code {
 .card-chat button {
   justify-content: center;
   min-height: 40px;
+  color: #ffffff;
+  background: #276756;
+}
+
+.open-innovation-button {
+  min-height: 38px;
+  margin: 2px 0 12px;
+  padding: 0 12px;
   color: #ffffff;
   background: #276756;
 }

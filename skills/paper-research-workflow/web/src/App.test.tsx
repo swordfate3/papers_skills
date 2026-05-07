@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { Paper, WorkbenchData } from "./domain";
-import { buildPlatformPrompt } from "./promptBuilder";
+import { buildInnovationPlatformPrompt, buildPlatformPrompt } from "./promptBuilder";
 
 const livePaper: Paper = {
   id: "live-paper-1",
@@ -142,6 +142,33 @@ describe("Paper research workbench", () => {
     expect(screen.getByLabelText("Markdown 文档阅读器")).toHaveTextContent("连续版神经网络");
   });
 
+  it("opens innovation ideas in the full markdown reader", async () => {
+    const user = userEvent.setup();
+    mockFetch(workspaceData());
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "创新挖掘" }));
+    await user.click(screen.getByRole("button", { name: /阅读创新文档/ }));
+
+    expect(screen.getByRole("heading", { name: "创新挖掘：组合创新" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Markdown 文档阅读器")).toHaveTextContent("把两篇论文组合");
+    expect(screen.getByRole("button", { name: "返回创新挖掘" })).toBeInTheDocument();
+  });
+
+  it("generates append-only platform prompts from innovation reader input", async () => {
+    const user = userEvent.setup();
+    mockFetch(workspaceData());
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "创新挖掘" }));
+    await user.click(screen.getByRole("button", { name: /阅读创新文档/ }));
+    await user.type(screen.getByLabelText("优化请求"), "请给这个创新点补充实验验证路线");
+    await user.click(screen.getByRole("button", { name: /生成平台请求/ }));
+
+    expect(screen.getByLabelText("创新挖掘平台请求")).toHaveTextContent("请给这个创新点补充实验验证路线");
+    expect(screen.getByLabelText("创新挖掘平台请求")).toHaveTextContent("追加保存到知识库");
+  });
+
   it("generates platform prompts from reader chat input", async () => {
     const user = userEvent.setup();
     mockFetch(workspaceData());
@@ -189,5 +216,19 @@ describe("buildPlatformPrompt", () => {
     expect(prompt).toContain(livePaper.id);
     expect(prompt).toContain("专家阅读");
     expect(prompt).toContain("另存新版本");
+  });
+
+  it("builds append-only prompts for innovation mining", () => {
+    const idea = workspaceData().innovations[0];
+    const prompt = buildInnovationPlatformPrompt({
+      platform: "Codex",
+      idea,
+      message: "继续排序"
+    });
+
+    expect(prompt).toContain("创新标题：组合创新");
+    expect(prompt).toContain("合理性分数：91");
+    expect(prompt).toContain("追加保存到知识库");
+    expect(prompt).toContain("不要覆盖旧创新记录");
   });
 });

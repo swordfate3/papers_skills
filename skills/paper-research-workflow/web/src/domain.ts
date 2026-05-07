@@ -56,6 +56,12 @@ export interface PlatformRequest {
   message: string;
 }
 
+export interface InnovationPlatformRequest {
+  platform: Platform;
+  idea: InnovationIdea;
+  message: string;
+}
+
 export const readingKindLabels: Record<ReadingKind, string> = {
   plain: "通俗易懂",
   expert: "专家阅读",
