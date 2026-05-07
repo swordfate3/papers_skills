@@ -84,6 +84,7 @@ def setup_workspace(workspace: Path) -> None:
     if not state_path.exists():
         write_json(state_path, {"papers": {}})
     release_web_workbench(workspace)
+    export_web_workbench_data(workspace)
 
 
 def load_state(workspace: Path) -> dict[str, Any]:
@@ -144,13 +145,175 @@ def release_web_workbench(workspace: Path, overwrite: bool = False) -> Path:
         raise FileNotFoundError(source)
     if target.exists() and overwrite:
         shutil.rmtree(target)
-    if not target.exists():
-        shutil.copytree(
-            source,
-            target,
-            ignore=shutil.ignore_patterns("node_modules", "dist", ".vite"),
-        )
+    shutil.copytree(
+        source,
+        target,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("node_modules", "dist", ".vite"),
+    )
     return target
+
+
+def _first_paragraph(markdown: str) -> str:
+    lines = []
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            if lines:
+                break
+            continue
+        if line.startswith("- "):
+            continue
+        lines.append(line)
+    return " ".join(lines)[:260] or "暂无内容，等待对应阅读流程生成。"
+
+
+def _bullet_points(markdown: str) -> list[str]:
+    bullets = []
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if line.startswith("- "):
+            bullets.append(line[2:].strip())
+        if len(bullets) >= 4:
+            break
+    return bullets or ["等待生成更完整的阅读要点。"]
+
+
+def _markdown_title(markdown: str, fallback: str) -> str:
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if line.startswith("#"):
+            return line.lstrip("#").strip() or fallback
+    return fallback
+
+
+def _latest_markdown(directory: Path, paper_id: str) -> Path | None:
+    candidates = sorted(directory.glob(f"{paper_id}*.md"), key=lambda path: path.stat().st_mtime, reverse=True)
+    return candidates[0] if candidates else None
+
+
+def _reading_card_from_markdown(
+    workspace: Path,
+    paper_id: str,
+    kind: str,
+    directory: str,
+    title: str,
+) -> dict[str, Any]:
+    path = _latest_markdown(workspace / directory, paper_id)
+    if path is None:
+        return {
+            "kind": kind,
+            "title": title,
+            "version": "pending",
+            "updatedAt": "",
+            "summary": "暂无内容，等待对应阅读流程生成。",
+            "bullets": ["可以在卡片底部请求平台生成该阅读产物。"],
+            "artifactPath": str(workspace / directory / f"{paper_id}.md"),
+        }
+    markdown = path.read_text(encoding="utf-8", errors="replace")
+    return {
+        "kind": kind,
+        "title": _markdown_title(markdown, title),
+        "version": path.stem.removeprefix(paper_id).lstrip(".") or "v1",
+        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)),
+        "summary": _first_paragraph(markdown),
+        "bullets": _bullet_points(markdown),
+        "artifactPath": str(path),
+    }
+
+
+def _innovation_from_markdown(path: Path, rank: int) -> dict[str, Any]:
+    markdown = path.read_text(encoding="utf-8", errors="replace")
+    score = 0
+    parsed_rank = rank
+    sources: list[dict[str, Any]] = []
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        lower = line.lower()
+        if lower.startswith("score:"):
+            try:
+                score = int(float(line.split(":", 1)[1].strip()))
+            except ValueError:
+                score = 0
+        if lower.startswith("rank:"):
+            try:
+                parsed_rank = int(float(line.split(":", 1)[1].strip()))
+            except ValueError:
+                parsed_rank = rank
+        if lower.startswith("sources:"):
+            for paper_id in line.split(":", 1)[1].replace(",", " ").split():
+                sources.append({"paperId": paper_id.strip(), "cardKind": "expert", "note": "创新来源"})
+    return {
+        "id": path.stem,
+        "title": _markdown_title(markdown, path.stem),
+        "score": score,
+        "rank": parsed_rank,
+        "summary": _first_paragraph(markdown),
+        "sources": sources,
+        "artifactPath": str(path),
+    }
+
+
+def export_web_workbench_data(workspace: Path) -> Path:
+    release_web_workbench(workspace)
+    public_dir = web_workbench_dir(workspace) / "public"
+    public_dir.mkdir(parents=True, exist_ok=True)
+
+    papers_payload = []
+    for memory_path in sorted((workspace / "knowledge/papers").glob("*.json")):
+        memory = read_json(memory_path)
+        paper_id = str(memory.get("paper_id") or memory_path.stem)
+        classification = memory.get("classification") if isinstance(memory.get("classification"), dict) else {}
+        domains = classification.get("domains") if isinstance(classification.get("domains"), list) else []
+        keywords = classification.get("keywords") if isinstance(classification.get("keywords"), list) else []
+        category = str(domains[0]) if domains else "未分类"
+        papers_payload.append(
+            {
+                "id": paper_id,
+                "title": str(memory.get("title") or paper_id),
+                "year": int(memory.get("year") or 0),
+                "category": category,
+                "tags": [str(item) for item in keywords[:5]],
+                "status": "complete" if memory.get("status", {}).get("ingested") else "ingested",
+                "cards": {
+                    "plain": _reading_card_from_markdown(
+                        workspace,
+                        paper_id,
+                        "plain",
+                        "knowledge/cards",
+                        "通俗易懂",
+                    ),
+                    "expert": _reading_card_from_markdown(
+                        workspace,
+                        paper_id,
+                        "expert",
+                        "knowledge/expert-readings",
+                        "专家阅读",
+                    ),
+                    "reproduction": _reading_card_from_markdown(
+                        workspace,
+                        paper_id,
+                        "reproduction",
+                        "knowledge/reproductions",
+                        "复现计划",
+                    ),
+                },
+            }
+        )
+
+    innovations_payload = [
+        _innovation_from_markdown(path, index + 1)
+        for index, path in enumerate(sorted((workspace / "knowledge/innovations").glob("*.md")))
+    ]
+    payload = {
+        "generatedAt": int(time.time()),
+        "workspace": str(workspace),
+        "papers": papers_payload,
+        "innovations": innovations_payload,
+    }
+    data_path = public_dir / "paper-workbench-data.json"
+    write_json(data_path, payload)
+    return data_path
 
 
 def _template_memory() -> dict[str, Any]:
@@ -230,6 +393,7 @@ def ingest_pdf(
             "manifest_status": manifest.get("status"),
         },
     )
+    export_web_workbench_data(workspace)
     return {"paper_id": paper_id, "memory_path": str(memory_path), "manifest": manifest}
 
 
@@ -410,11 +574,15 @@ def run_web_workbench(
     if command == "start":
         return _start_web_workbench(resolved_workspace, port=port, host=host)
     if command == "status":
-        return {"ok": True, **web_workbench_status(resolved_workspace)}
+        data_path = export_web_workbench_data(resolved_workspace)
+        return {"ok": True, "data_path": str(data_path), **web_workbench_status(resolved_workspace)}
     if command == "stop":
         return _stop_web_workbench(resolved_workspace)
     if command == "logs":
         return _web_workbench_logs(resolved_workspace, log_lines)
+    if command == "refresh-data":
+        data_path = export_web_workbench_data(resolved_workspace)
+        return {"ok": True, "data_path": str(data_path), "web_dir": str(web_workbench_dir(resolved_workspace))}
 
     setup_workspace(resolved_workspace)
     web_dir = web_workbench_dir(resolved_workspace)
@@ -474,7 +642,7 @@ def main() -> int:
     web_parser = subparsers.add_parser("web")
     web_parser.add_argument(
         "--web-command",
-        choices=["dev", "build", "test", "preview", "start", "status", "stop", "logs"],
+        choices=["dev", "build", "test", "preview", "start", "status", "stop", "logs", "refresh-data"],
         default="dev",
     )
     web_parser.add_argument("--port", type=int, default=5173)

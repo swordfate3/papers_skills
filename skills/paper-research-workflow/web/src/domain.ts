@@ -38,6 +38,13 @@ export interface InnovationIdea {
   artifactPath: string;
 }
 
+export interface WorkbenchData {
+  generatedAt: number;
+  workspace: string;
+  papers: Paper[];
+  innovations: InnovationIdea[];
+}
+
 export interface PlatformRequest {
   platform: Platform;
   paper: Paper;

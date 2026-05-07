@@ -29,6 +29,7 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "web/src/App.tsx",
         "web/src/domain.ts",
         "web/src/sampleData.ts",
+        "web/src/workbenchData.ts",
         "web/src/promptBuilder.ts",
         "web/src/App.test.tsx",
     ]:

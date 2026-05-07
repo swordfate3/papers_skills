@@ -154,6 +154,9 @@ def test_web_workbench_child_skill_describes_service_lifecycle():
         assert word in text
     assert "<workspace>/web" in text
     assert "target workspace" in text
+    assert "refresh-data" in text
+    assert "paper-workbench-data.json" in text
+    assert "hot-read" in text
 
 
 def test_visual_workflow_diagram_includes_web_workbench_lifecycle():
@@ -163,4 +166,6 @@ def test_visual_workflow_diagram_includes_web_workbench_lifecycle():
     assert "web --web-command status" in text
     assert "web --web-command logs" in text
     assert "web --web-command stop" in text
+    assert "web --web-command refresh-data" in text
+    assert "paper-workbench-data.json" in text
     assert "三列阅读卡" in text

@@ -1,4 +1,4 @@
-import { InnovationIdea, Paper } from "./domain";
+import { InnovationIdea, Paper, WorkbenchData } from "./domain";
 
 export const papers: Paper[] = [
   {
@@ -99,3 +99,10 @@ export const innovations: InnovationIdea[] = [
     artifactPath: "workspace/knowledge/innovations/innovation-diff-integral-memory.md"
   }
 ];
+
+export const sampleWorkbenchData: WorkbenchData = {
+  generatedAt: 0,
+  workspace: "sample",
+  papers,
+  innovations
+};

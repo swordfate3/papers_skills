@@ -77,6 +77,14 @@ skills/paper-research-workflow/web/
 
 后续 `npm install`、`npm run dev`、服务状态和日志都发生在这个目标工作区副本中，不会写入 skill 安装目录。
 
+`setup` 和后续维护命令会把真实工作区数据导出到：
+
+```text
+<paper-library>/web/public/paper-workbench-data.json
+```
+
+前端每 5 秒 hot-read 这个 JSON，所以它显示的是当前论文库里的真实分类、阅读卡、复现计划和创新记录；如果导入新论文或生成了新阅读产物，可以运行 `refresh-data` 立即刷新数据文件。技能包模板升级后再次 `setup` 也会同步 `<paper-library>/web/src` 等模板源码，但会保留 `node_modules`、`dist`、`.vite` 运行产物。
+
 这个工作台把论文阅读流程可视化：左侧是论文分类，右侧是三列阅读卡，分别对应 `通俗易懂`、`专家阅读`、`复现计划`。每张卡底部都有一个平台对话框，可以选择 `Codex`、`Claude Code` 或 `OpenClaw`，输入“讲得更详细”“专家阅读更关注实验缺陷”“复现计划改成 PyTorch 路线”等请求后，生成可交给对应平台继续执行的结构化任务文本。
 
 `创新挖掘` 会显示创新点、合理性分数、排序和来源论文链接；点击来源论文会回到对应论文的三列阅读卡，方便追踪一个创新想法来自哪几篇论文、哪些阅读产物。
@@ -88,6 +96,7 @@ cd skills/paper-research-workflow
 python scripts/paper_workflow.py setup --workspace /path/to/paper-library --save-default
 python scripts/paper_workflow.py web --web-command start --workspace /path/to/paper-library --host 127.0.0.1 --port 5173
 python scripts/paper_workflow.py web --web-command status --workspace /path/to/paper-library
+python scripts/paper_workflow.py web --web-command refresh-data --workspace /path/to/paper-library
 ```
 
 构建验证：

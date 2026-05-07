@@ -11,6 +11,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from paper_workflow import (  # noqa: E402
     enable_local_mineru,
+    export_web_workbench_data,
     load_default_workspace,
     local_mineru_status,
     release_web_workbench,
@@ -209,3 +210,60 @@ def test_release_web_workbench_copies_template_to_workspace(tmp_path):
     assert (target / "package.json").is_file()
     assert (target / "src/App.tsx").is_file()
     assert web_workbench_dir(workspace) == target
+
+
+def test_release_web_workbench_syncs_template_updates_without_runtime_dirs(tmp_path):
+    workspace = tmp_path / "paper-library"
+    target = release_web_workbench(workspace)
+    stale_file = target / "src/workbenchData.ts"
+    stale_file.write_text("stale", encoding="utf-8")
+    runtime_file = target / "node_modules/local.txt"
+    runtime_file.parent.mkdir()
+    runtime_file.write_text("keep", encoding="utf-8")
+
+    release_web_workbench(workspace)
+
+    assert "WORKBENCH_DATA_URL" in stale_file.read_text(encoding="utf-8")
+    assert runtime_file.read_text(encoding="utf-8") == "keep"
+
+
+def test_export_web_workbench_data_writes_hot_json_from_workspace(tmp_path):
+    workspace = tmp_path / "paper-library"
+    setup_workspace(workspace)
+    memory = {
+        "paper_id": "paper-1",
+        "title": "Differential Equation Paper",
+        "year": 2026,
+        "classification": {
+            "domains": ["差分论文"],
+            "keywords": ["difference", "equation"],
+        },
+        "status": {"ingested": True},
+    }
+    memory_path = workspace / "knowledge/papers/paper-1.json"
+    memory_path.write_text(json.dumps(memory), encoding="utf-8")
+    (workspace / "knowledge/cards/paper-1.md").write_text("# 通俗解释\n\n核心直觉 A\n\n- 要点一\n- 要点二\n", encoding="utf-8")
+    (workspace / "knowledge/expert-readings/paper-1.md").write_text("# 专家阅读\n\n实验缺陷 B\n", encoding="utf-8")
+    (workspace / "knowledge/reproductions/paper-1.md").write_text("# 复现计划\n\n先做最小实验 C\n", encoding="utf-8")
+    (workspace / "knowledge/innovations/idea-1.md").write_text(
+        "# 新想法\n\nscore: 88\nrank: 1\nsources: paper-1\n\n把差分结构用于算子学习。",
+        encoding="utf-8",
+    )
+
+    data_path = export_web_workbench_data(workspace)
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+
+    assert data_path == workspace / "web/public/paper-workbench-data.json"
+    assert payload["papers"][0]["id"] == "paper-1"
+    assert payload["papers"][0]["category"] == "差分论文"
+    assert payload["papers"][0]["cards"]["plain"]["summary"].startswith("核心直觉")
+    assert payload["innovations"][0]["score"] == 88
+
+
+def test_run_web_workbench_refresh_data_command_writes_hot_json(tmp_path):
+    workspace = tmp_path / "paper-library"
+    result = run_web_workbench("refresh-data", workspace=workspace)
+
+    assert result["ok"] is True
+    assert result["data_path"] == str(workspace / "web/public/paper-workbench-data.json")
+    assert (workspace / "web/public/paper-workbench-data.json").is_file()

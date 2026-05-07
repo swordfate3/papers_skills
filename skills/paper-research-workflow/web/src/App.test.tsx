@@ -1,11 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { buildPlatformPrompt } from "./promptBuilder";
 import { papers } from "./sampleData";
 
 describe("Paper research workbench", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders category navigation and three reading cards", () => {
     render(<App />);
 
@@ -45,6 +49,62 @@ describe("Paper research workbench", () => {
 
     expect(screen.getByLabelText("通俗易懂平台请求")).toHaveTextContent("请把通俗解释讲得更细");
     expect(screen.getByLabelText("通俗易懂平台请求")).toHaveTextContent("Codex");
+  });
+
+  it("replaces sample papers with hot workspace data", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        generatedAt: 1778120000,
+        workspace: "/tmp/live-paper-library",
+        papers: [
+          {
+            id: "live-paper-1",
+            title: "Live Differential Paper",
+            year: 2026,
+            category: "实时分类",
+            tags: ["live"],
+            status: "complete",
+            cards: {
+              plain: {
+                kind: "plain",
+                title: "实时通俗解释",
+                version: "v1",
+                updatedAt: "2026-05-07",
+                summary: "这是从工作区 JSON 热读取出来的解释。",
+                bullets: ["热读取成功"],
+                artifactPath: "/tmp/live-paper-library/knowledge/cards/live-paper-1.md"
+              },
+              expert: {
+                kind: "expert",
+                title: "实时专家阅读",
+                version: "v1",
+                updatedAt: "2026-05-07",
+                summary: "专家卡来自工作区。",
+                bullets: ["检查真实数据"],
+                artifactPath: "/tmp/live-paper-library/knowledge/expert-readings/live-paper-1.md"
+              },
+              reproduction: {
+                kind: "reproduction",
+                title: "实时复现计划",
+                version: "v1",
+                updatedAt: "2026-05-07",
+                summary: "复现卡来自工作区。",
+                bullets: ["运行最小实验"],
+                artifactPath: "/tmp/live-paper-library/knowledge/reproductions/live-paper-1.md"
+              }
+            }
+          }
+        ],
+        innovations: []
+      })
+    } as Response);
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Live Differential Paper" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toHaveTextContent("实时分类");
+    expect(screen.queryByRole("heading", { name: "Differential Transformer for Long Context Reasoning" })).not.toBeInTheDocument();
   });
 });
 

@@ -9,6 +9,8 @@ description: Use when the user asks to open, start, stop, check, debug, restart,
 
 Operate the bundled React/Vite workbench. The skill package stores a template in `web/`, but the running app must live in the user's target workspace at `<workspace>/web`. All service maintenance should target that workspace copy.
 
+The app is data-driven: Python exports live workspace data to `<workspace>/web/public/paper-workbench-data.json`, and the frontend hot-reads that file every 5 seconds. Bundled sample data is only a fallback before the workspace JSON is available.
+
 ## When To Use
 
 Use this when the user asks to:
@@ -36,6 +38,26 @@ The helper copies the bundled template to:
 <workspace>/web
 ```
 
+If the workbench was already released, the helper syncs updated template source files into `<workspace>/web` and preserves runtime directories:
+
+```text
+<workspace>/web/node_modules
+<workspace>/web/dist
+<workspace>/web/.vite
+```
+
+Refresh the hot-read data file:
+
+```bash
+python scripts/paper_workflow.py web --web-command refresh-data --workspace <workspace>
+```
+
+This writes:
+
+```text
+<workspace>/web/public/paper-workbench-data.json
+```
+
 Install npm dependencies in that target workspace copy:
 
 ```bash
@@ -54,6 +76,8 @@ Check status:
 ```bash
 python scripts/paper_workflow.py web --web-command status --workspace <workspace>
 ```
+
+`status` also refreshes `paper-workbench-data.json` before reporting service state.
 
 Read recent logs:
 
@@ -82,6 +106,7 @@ python scripts/paper_workflow.py web --web-command preview --workspace <workspac
 - If `start` fails, run `logs` and report the relevant npm or Vite error.
 - If dependencies are missing, tell the user to allow `npm install` in `<workspace>/web`; do not claim the service is ready.
 - Prefer `start` for long-running service use and `dev` only when the user wants foreground output.
+- Run `refresh-data` after a manual edit to `knowledge/` artifacts when the user wants the UI updated immediately; otherwise the next setup, ingest, start, or status command will refresh it.
 - Use `stop` before changing ports or after the user says they are done with the visualizer.
 
 ## State Files

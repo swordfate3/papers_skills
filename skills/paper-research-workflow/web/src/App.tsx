@@ -1,8 +1,9 @@
-import { FormEvent, ReactNode, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { BookOpen, Brain, Code2, Lightbulb, MessageSquare, Network, Search } from "lucide-react";
-import { InnovationIdea, Paper, Platform, ReadingCard, ReadingKind, readingKindLabels } from "./domain";
-import { innovations, papers } from "./sampleData";
+import { InnovationIdea, Paper, Platform, ReadingCard, ReadingKind, WorkbenchData, readingKindLabels } from "./domain";
+import { sampleWorkbenchData } from "./sampleData";
 import { buildPlatformPrompt } from "./promptBuilder";
+import { WORKBENCH_POLL_INTERVAL_MS, dataOrSample, loadWorkbenchData } from "./workbenchData";
 
 const cardIcons: Record<ReadingKind, ReactNode> = {
   plain: <BookOpen aria-hidden="true" />,
@@ -14,6 +15,15 @@ const platforms: Platform[] = ["Codex", "Claude Code", "OpenClaw"];
 
 function categoriesFor(items: Paper[]) {
   return ["全部论文", ...Array.from(new Set(items.map((paper) => paper.category))), "创新挖掘"];
+}
+
+function EmptyWorkspace({ workspace }: { workspace: string }) {
+  return (
+    <section className="empty-workspace" aria-label="空工作区">
+      <h2>还没有可视化论文数据</h2>
+      <p>{workspace ? `当前工作区：${workspace}` : "请先在论文工作区导入论文或刷新 Web 数据。"}</p>
+    </section>
+  );
 }
 
 function ReadingPanel({
@@ -135,10 +145,19 @@ function InnovationBoard({
 }
 
 export default function App() {
+  const [liveData, setLiveData] = useState<WorkbenchData>(sampleWorkbenchData);
+  const [hasLoadedWorkspaceData, setHasLoadedWorkspaceData] = useState(false);
   const [activeCategory, setActiveCategory] = useState("全部论文");
-  const [selectedPaperId, setSelectedPaperId] = useState(papers[0].id);
-  const categories = useMemo(() => categoriesFor(papers), []);
-  const papersById = useMemo(() => new Map(papers.map((paper) => [paper.id, paper])), []);
+  const [selectedPaperId, setSelectedPaperId] = useState(sampleWorkbenchData.papers[0].id);
+  const displayData = useMemo(
+    () => (hasLoadedWorkspaceData ? liveData : dataOrSample(liveData)),
+    [hasLoadedWorkspaceData, liveData]
+  );
+  const papers = displayData.papers;
+  const innovations = displayData.innovations;
+  const hasRealWorkspaceContent = hasLoadedWorkspaceData && (liveData.papers.length > 0 || liveData.innovations.length > 0);
+  const categories = useMemo(() => categoriesFor(papers), [papers]);
+  const papersById = useMemo(() => new Map(papers.map((paper) => [paper.id, paper])), [papers]);
   const filteredPapers = activeCategory === "全部论文" || activeCategory === "创新挖掘"
     ? papers
     : papers.filter((paper) => paper.category === activeCategory);
@@ -147,6 +166,43 @@ export default function App() {
     currentPaper && filteredPapers.some((paper) => paper.id === currentPaper.id)
       ? currentPaper
       : filteredPapers[0] ?? papers[0];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const data = await loadWorkbenchData();
+        if (!cancelled) {
+          setLiveData(data);
+          setHasLoadedWorkspaceData(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setHasLoadedWorkspaceData(false);
+        }
+      }
+    }
+
+    void refresh();
+    const timer = window.setInterval(refresh, WORKBENCH_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!papersById.has(selectedPaperId) && papers[0]) {
+      setSelectedPaperId(papers[0].id);
+    }
+  }, [papers, papersById, selectedPaperId]);
+
+  useEffect(() => {
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory("全部论文");
+    }
+  }, [activeCategory, categories]);
 
   function selectPaper(paper: Paper) {
     setSelectedPaperId(paper.id);
@@ -185,12 +241,14 @@ export default function App() {
         <header className="workspace-header">
           <div>
             <p>{activeCategory}</p>
-            <h2>{activeCategory === "创新挖掘" ? "创新挖掘与来源追踪" : selectedPaper.title}</h2>
+            <h2>{activeCategory === "创新挖掘" ? "创新挖掘与来源追踪" : selectedPaper?.title ?? "等待论文数据"}</h2>
           </div>
           <span>{filteredPapers.length} 篇论文</span>
         </header>
 
-        {activeCategory === "创新挖掘" ? (
+        {!hasRealWorkspaceContent && hasLoadedWorkspaceData ? (
+          <EmptyWorkspace workspace={liveData.workspace} />
+        ) : activeCategory === "创新挖掘" ? (
           <InnovationBoard ideas={innovations} papersById={papersById} onSelectPaper={selectPaper} />
         ) : (
           <>
@@ -209,7 +267,7 @@ export default function App() {
             </div>
 
             <section className="reading-grid" aria-label="三列阅读卡">
-              {(["plain", "expert", "reproduction"] as ReadingKind[]).map((kind) => (
+              {selectedPaper && (["plain", "expert", "reproduction"] as ReadingKind[]).map((kind) => (
                 <ReadingPanel key={kind} paper={selectedPaper} card={selectedPaper.cards[kind]} />
               ))}
             </section>
