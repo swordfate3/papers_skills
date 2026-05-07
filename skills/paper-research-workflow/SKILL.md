@@ -115,6 +115,22 @@ workspace/knowledge/innovations/
 workspace/state/papers.json
 ```
 
+## Web Workbench
+
+This skill also bundles a React/Vite visual workbench in `web/`. Use it when the user asks to see or operate the paper workflow visually.
+
+The workbench presents category navigation on the left and three reading cards on the right: `通俗易懂`, `专家阅读`, and `复现计划`. Each card includes a platform request box for `Codex`, `Claude Code`, or `OpenClaw`, producing a structured prompt that asks the selected platform to refine that part of the workflow and save a new version unless the user explicitly requests overwrite.
+
+The `创新挖掘` view shows ranked innovation ideas, scores, and source links back to the specific papers and reading cards that inspired the idea.
+
+Run it from the installed skill directory:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
 ## Routing
 
 For a full paper read:

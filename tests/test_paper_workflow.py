@@ -13,6 +13,7 @@ from paper_workflow import (  # noqa: E402
     enable_local_mineru,
     load_default_workspace,
     local_mineru_status,
+    run_web_workbench,
     save_default_workspace,
     setup_workspace,
     update_state,
@@ -120,3 +121,24 @@ def test_enable_local_mineru_passes_through_optional_sources(monkeypatch):
         "--image",
         "mineru:test",
     ]
+
+
+def test_run_web_workbench_executes_npm_in_bundled_web_dir(monkeypatch):
+    import paper_workflow
+
+    calls = []
+
+    class Result:
+        returncode = 0
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return Result()
+
+    monkeypatch.setattr(paper_workflow.subprocess, "run", fake_run)
+
+    result = run_web_workbench("build")
+
+    assert result["ok"] is True
+    assert calls[0][0] == ["npm", "run", "build"]
+    assert calls[0][1]["cwd"].name == "web"

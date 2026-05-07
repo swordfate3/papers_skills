@@ -115,6 +115,10 @@ def _local_mineru_script() -> Path:
     return Path(__file__).resolve().with_name("mineru_local_docker.sh")
 
 
+def _web_dir() -> Path:
+    return _suite_root() / "web"
+
+
 def _template_memory() -> dict[str, Any]:
     return read_json(_suite_root() / "templates/paper-memory.json")
 
@@ -271,6 +275,18 @@ def enable_local_mineru(
     return payload
 
 
+def run_web_workbench(command: str = "dev") -> dict[str, Any]:
+    web_dir = _web_dir()
+    if not (web_dir / "package.json").exists():
+        return {"ok": False, "reason": f"missing web package: {web_dir / 'package.json'}"}
+    result = subprocess.run(
+        ["npm", "run", command],
+        check=False,
+        cwd=web_dir,
+    )
+    return {"ok": result.returncode == 0, "command": f"npm run {command}", "web_dir": str(web_dir)}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Paper research workflow helper.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -313,6 +329,9 @@ def main() -> int:
     local_mineru_parser.add_argument("--source-archive-url", default=None)
     local_mineru_parser.add_argument("--source-subdir", default=None)
     local_mineru_parser.add_argument("--image", default=None)
+
+    web_parser = subparsers.add_parser("web")
+    web_parser.add_argument("--web-command", choices=["dev", "build", "test", "preview"], default="dev")
 
     args = parser.parse_args()
 
@@ -372,6 +391,9 @@ def main() -> int:
             return 0 if result["ok"] else 1
         print(json.dumps(local_mineru_status(), ensure_ascii=False, indent=2))
         return 0
+    if args.command == "web":
+        result = run_web_workbench(args.web_command)
+        return 0 if result["ok"] else 1
     return 1
 
 

@@ -127,3 +127,18 @@ def test_innovation_workflow_requires_ranked_append_only_storage():
     assert "highest to lowest" in text
     assert "must not overwrite" in text
     assert "append" in text
+
+
+def test_visual_workbench_documents_three_cards_and_innovation_sources():
+    for relative in [
+        "README.md",
+        "skills/paper-research-workflow/SKILL.md",
+    ]:
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "web/" in text
+        assert "通俗易懂" in text
+        assert "专家阅读" in text
+        assert "复现计划" in text
+        assert "创新挖掘" in text
+        assert "Codex" in text
+        assert "Claude Code" in text

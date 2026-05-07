@@ -61,6 +61,33 @@ flowchart TD
     N --> N1[创新候选 score 排名并 append 入库]
 ```
 
+## Web 可视化工作台
+
+技能包内置了一个 React/Vite Web 工作台，位置在：
+
+```text
+skills/paper-research-workflow/web/
+```
+
+这个工作台把论文阅读流程可视化：左侧是论文分类，右侧是三列阅读卡，分别对应 `通俗易懂`、`专家阅读`、`复现计划`。每张卡底部都有一个平台对话框，可以选择 `Codex`、`Claude Code` 或 `OpenClaw`，输入“讲得更详细”“专家阅读更关注实验缺陷”“复现计划改成 PyTorch 路线”等请求后，生成可交给对应平台继续执行的结构化任务文本。
+
+`创新挖掘` 会显示创新点、合理性分数、排序和来源论文链接；点击来源论文会回到对应论文的三列阅读卡，方便追踪一个创新想法来自哪几篇论文、哪些阅读产物。
+
+本地启动：
+
+```bash
+cd skills/paper-research-workflow/web
+npm install
+npm run dev
+```
+
+构建验证：
+
+```bash
+npm run test -- --run
+npm run build
+```
+
 ## 语言模式
 
 这个技能默认面向中文用户：对话、论文卡片、专家阅读、复现计划、创新简报和状态说明默认使用中文。论文标题、作者、方法名、模型名、数据集、指标、benchmark、命令和代码标识会尽量保留原文，避免翻译后失真。

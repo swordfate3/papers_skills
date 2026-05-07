@@ -23,8 +23,23 @@ def test_single_skill_directory_contains_all_runtime_resources():
         "references/mineru-local.md",
         "references/child-skills/paper-ingest-classifier.md",
         "references/child-skills/paper-innovation-miner.md",
+        "web/package.json",
+        "web/index.html",
+        "web/src/App.tsx",
+        "web/src/domain.ts",
+        "web/src/sampleData.ts",
+        "web/src/promptBuilder.ts",
+        "web/src/App.test.tsx",
     ]:
         assert (SKILL_DIR / relative).is_file()
+
+
+def test_visual_workbench_declares_expected_frontend_stack():
+    package = (SKILL_DIR / "web/package.json").read_text(encoding="utf-8")
+    assert '"react"' in package
+    assert '"vite"' in package
+    assert '"test"' in package
+    assert '"build"' in package
 
 
 def test_single_skill_install_smoke_test(tmp_path):
