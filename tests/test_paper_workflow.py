@@ -12,6 +12,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 from paper_workflow import (  # noqa: E402
     enable_local_mineru,
     export_web_workbench_data,
+    paper_next_actions,
     load_default_workspace,
     local_mineru_status,
     release_web_workbench,
@@ -59,6 +60,15 @@ def test_save_and_load_default_workspace(tmp_path):
     workspace = tmp_path / "paper-library"
     save_default_workspace(workspace, config)
     assert load_default_workspace(config) == workspace.resolve()
+
+
+def test_paper_next_actions_guide_common_chinese_workflows(tmp_path):
+    actions = paper_next_actions(tmp_path)
+
+    assert any("读取论文" in action for action in actions)
+    assert any("MinerU" in action for action in actions)
+    assert any("启动可视化" in action for action in actions)
+    assert any("创新挖掘" in action for action in actions)
 
 
 def test_local_mineru_status_marks_available_when_script_reports_ready(monkeypatch):
@@ -376,6 +386,7 @@ def test_run_web_workbench_refresh_data_command_writes_hot_json(tmp_path):
     assert result["ok"] is True
     assert result["data_path"] == str(workspace / "web/public/paper-workbench-data.json")
     assert (workspace / "web/public/paper-workbench-data.json").is_file()
+    assert any("启动可视化" in action for action in result["next_actions"])
 
 
 def test_run_web_workbench_release_force_and_validate_release(tmp_path):
@@ -392,8 +403,17 @@ def test_run_web_workbench_release_force_and_validate_release(tmp_path):
     validation = run_web_workbench("validate-release", workspace=workspace)
 
     assert release["ok"] is True
+    assert any("npm install" in action for action in release["next_actions"])
     assert validation["ok"] is True
     assert not stale_file.exists()
+
+
+def test_run_web_workbench_status_includes_next_actions(tmp_path):
+    result = run_web_workbench("status", workspace=tmp_path)
+
+    assert result["ok"] is True
+    assert "next_actions" in result
+    assert any("刷新 Web 数据" in action for action in result["next_actions"])
 
 
 def test_validate_web_release_allows_runtime_artifacts_but_flags_stale_sources(tmp_path):

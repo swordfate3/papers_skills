@@ -1,4 +1,4 @@
 interface:
-  display_name: "Paper Research Workflow"
-  short_description: "Orchestrate paper reading workflows"
-  default_prompt: "Use $paper-research-workflow to read a local paper through the full research workflow."
+  display_name: "论文阅读工作流 / Paper Research Workflow"
+  short_description: "论文解析、分类、通俗解释、专家阅读、复现计划、知识库和创新挖掘"
+  default_prompt: "使用 $paper-research-workflow 读取这篇论文：<PDF路径>。如果是第一次使用，请先引导我创建论文工作区，然后自动分类、解析、生成通俗解释、专家阅读、复现计划，并更新知识库。"

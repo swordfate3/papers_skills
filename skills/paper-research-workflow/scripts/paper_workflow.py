@@ -115,6 +115,31 @@ def setup_workspace(workspace: Path) -> None:
     export_web_workbench_data(workspace)
 
 
+def paper_next_actions(workspace: Path) -> list[str]:
+    resolved = workspace.expanduser().resolve()
+    web_dir = resolved / "web"
+    return [
+        f"读取论文：python scripts/paper_workflow.py ingest <PDF路径> --workspace {resolved}",
+        "高质量 MinerU 解析：python scripts/paper_workflow.py ingest <PDF路径> "
+        f"--workspace {resolved} --prefer-mineru --mineru-backend auto",
+        f"启动可视化工作台：python scripts/paper_workflow.py web --web-command start --workspace {resolved}",
+        f"刷新 Web 数据：python scripts/paper_workflow.py web --web-command refresh-data --workspace {resolved}",
+        f"安装 Web 依赖：cd {web_dir} && npm install",
+        "创新挖掘：使用 paper-research-workflow 基于当前知识库挖掘新的创新点，并按合理性排序追加保存",
+    ]
+
+
+def workspace_status_payload(workspace: Path) -> dict[str, Any]:
+    resolved = workspace.expanduser().resolve()
+    state = load_state(resolved)
+    return {
+        "ok": True,
+        "workspace": str(resolved),
+        "papers": state.get("papers", {}),
+        "next_actions": paper_next_actions(resolved),
+    }
+
+
 def load_state(workspace: Path) -> dict[str, Any]:
     state_path = workspace / "state/papers.json"
     if not state_path.exists():
@@ -690,6 +715,7 @@ def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0
             "reason": "dependencies_missing",
             "web_dir": str(web_dir),
             "next": f"cd {web_dir} && npm install",
+            "next_actions": paper_next_actions(workspace),
         }
 
     log_path = web_service_log_path(workspace)
@@ -745,7 +771,7 @@ def _start_web_workbench(workspace: Path, port: int = 5173, host: str = "127.0.0
             "detached": True,
         }
         write_json(web_service_state_path(workspace), state)
-        return {"ok": True, "running": True, **state, "log_path": str(log_path)}
+        return {"ok": True, "running": True, **state, "log_path": str(log_path), "next_actions": paper_next_actions(workspace)}
     finally:
         log_file.close()
 
@@ -796,7 +822,13 @@ def run_web_workbench(
         return _start_web_workbench(resolved_workspace, port=port, host=host)
     if command == "status":
         data_path = web_workbench_dir(resolved_workspace) / "public" / WEB_DATA_FILENAME
-        return {"ok": True, "data_path": str(data_path), "data_exists": data_path.exists(), **web_workbench_status(resolved_workspace)}
+        return {
+            "ok": True,
+            "data_path": str(data_path),
+            "data_exists": data_path.exists(),
+            **web_workbench_status(resolved_workspace),
+            "next_actions": paper_next_actions(resolved_workspace),
+        }
     if command == "stop":
         return _stop_web_workbench(resolved_workspace)
     if command == "logs":
@@ -804,10 +836,15 @@ def run_web_workbench(
     if command == "release":
         web_dir = release_web_workbench(resolved_workspace, force=force_release, backup=backup)
         data_path = export_web_workbench_data(resolved_workspace)
-        return {"ok": True, "web_dir": str(web_dir), "data_path": str(data_path)}
+        return {"ok": True, "web_dir": str(web_dir), "data_path": str(data_path), "next_actions": paper_next_actions(resolved_workspace)}
     if command == "refresh-data":
         data_path = export_web_workbench_data(resolved_workspace)
-        return {"ok": True, "data_path": str(data_path), "web_dir": str(web_workbench_dir(resolved_workspace))}
+        return {
+            "ok": True,
+            "data_path": str(data_path),
+            "web_dir": str(web_workbench_dir(resolved_workspace)),
+            "next_actions": paper_next_actions(resolved_workspace),
+        }
     if command == "validate-release":
         if not web_workbench_dir(resolved_workspace).exists():
             release_web_workbench(resolved_workspace, force=False)
@@ -901,9 +938,22 @@ def main() -> int:
     if args.command == "setup":
         workspace = resolve_workspace(args.workspace)
         setup_workspace(workspace)
+        default_saved = False
         if args.save_default:
             save_default_workspace(workspace)
-        print(workspace)
+            default_saved = True
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "workspace": str(workspace),
+                    "default_saved": default_saved,
+                    "next_actions": paper_next_actions(workspace),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
     if args.command == "configure-mineru":
         if args.standard_token:
@@ -911,7 +961,7 @@ def main() -> int:
         print(json.dumps(mineru_config_status(), ensure_ascii=False, indent=2))
         return 0
     if args.command == "status":
-        print(json.dumps(load_state(resolve_workspace(args.workspace)), ensure_ascii=False, indent=2))
+        print(json.dumps(workspace_status_payload(resolve_workspace(args.workspace)), ensure_ascii=False, indent=2))
         return 0
     if args.command == "validate":
         results = validate_workspace(resolve_workspace(args.workspace))

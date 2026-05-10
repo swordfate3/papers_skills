@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 import sys
@@ -86,6 +87,10 @@ def test_single_skill_install_smoke_test(tmp_path):
     )
     assert setup.returncode == 0, setup.stderr
     assert (workspace / "state/papers.json").is_file()
+    setup_payload = json.loads(setup.stdout)
+    assert setup_payload["ok"] is True
+    assert setup_payload["workspace"] == str(workspace.resolve())
+    assert any("读取论文" in action for action in setup_payload["next_actions"])
 
     status = subprocess.run(
         [sys.executable, "scripts/paper_workflow.py", "status", "--workspace", str(workspace)],
@@ -96,6 +101,10 @@ def test_single_skill_install_smoke_test(tmp_path):
     )
     assert status.returncode == 0, status.stderr
     assert '"papers": {}' in status.stdout
+    status_payload = json.loads(status.stdout)
+    assert status_payload["ok"] is True
+    assert status_payload["workspace"] == str(workspace.resolve())
+    assert any("启动可视化" in action for action in status_payload["next_actions"])
 
 
 def test_single_skill_mineru_config_smoke_test(tmp_path):
@@ -151,6 +160,8 @@ def test_single_skill_default_workspace_smoke_test(tmp_path):
     )
     assert setup.returncode == 0, setup.stderr
     assert (installed / ".paper-workspace.json").is_file()
+    setup_payload = json.loads(setup.stdout)
+    assert setup_payload["default_saved"] is True
 
     status = subprocess.run(
         [sys.executable, "scripts/paper_workflow.py", "status"],
@@ -161,3 +172,5 @@ def test_single_skill_default_workspace_smoke_test(tmp_path):
     )
     assert status.returncode == 0, status.stderr
     assert '"papers": {}' in status.stdout
+    status_payload = json.loads(status.stdout)
+    assert status_payload["workspace"] == str(workspace.resolve())

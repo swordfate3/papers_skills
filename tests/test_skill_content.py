@@ -24,6 +24,34 @@ def test_workflow_skill_mentions_all_child_skills_and_shared_cli():
     assert "shared/scripts/paper_workflow.py" not in text
 
 
+def test_workflow_skill_has_chinese_first_quick_start_guidance():
+    text = read_skill("paper-research-workflow")
+    assert "## Quick Start" in text
+    for phrase in [
+        "第一次使用",
+        "读取这篇论文",
+        "用 MinerU 高质量解析",
+        "启动论文阅读工作台",
+        "基于知识库挖掘新的创新点",
+    ]:
+        assert phrase in text
+
+
+def test_openai_interface_metadata_guides_chinese_users():
+    text = (ROOT / "skills/paper-research-workflow/agents/openai.yaml").read_text(encoding="utf-8")
+    assert 'display_name: "论文阅读工作流' in text
+    assert "论文解析、分类、通俗解释、专家阅读、复现计划、知识库和创新挖掘" in text
+    assert "使用 $paper-research-workflow 读取这篇论文" in text
+
+
+def test_readme_shows_post_install_invocation_prompts():
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "## 安装后怎么调用" in text
+    assert "使用 paper-research-workflow 读取这篇论文" in text
+    assert "基于知识库挖掘新的创新点" in text
+    assert "第一次使用时" in text
+
+
 def test_ingest_skill_uses_bundled_pdf_references_not_external_skills():
     text = (ROOT / "skills/paper-research-workflow/references/child-skills/paper-ingest-classifier.md").read_text(
         encoding="utf-8"

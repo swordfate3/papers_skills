@@ -1,6 +1,6 @@
 ---
 name: paper-research-workflow
-description: Use when the user asks to read, process, classify, explain, reproduce, store, query, or mine innovation ideas from local computer-science research papers. Orchestrates the paper research skill suite across ingest, plain explanation, expert reading, reproduction planning, knowledge-base updates, and innovation mining.
+description: Use when the user asks to read, parse, classify, explain, reproduce, store, query, visualize, or mine innovation ideas from local research papers/PDFs, including Chinese requests like 读取论文、解析PDF、通俗解释、专家阅读、复现代码、知识库、创新挖掘、启动论文工作台、MinerU解析.
 ---
 
 # Paper Research Workflow
@@ -20,6 +20,24 @@ Route natural user requests to the six internal child workflows:
 - `references/child-skills/paper-web-workbench.md`
 
 Use this skill when the user asks to "read this paper", process a local PDF, update the paper knowledge base, prepare a reproduction plan, or find innovation ideas from stored papers.
+
+## Quick Start
+
+When the user invokes this skill without a concrete command, guide them in Chinese by default:
+
+1. 第一次使用：检查默认论文工作区；如果不存在，询问用户要把长期论文工作区创建在哪里。
+2. 读取这篇论文：如果用户提供 PDF 路径，先初始化工作区，再导入、分类、提取、生成通俗解释、专家阅读、复现计划，并更新知识库。
+3. 用 MinerU 高质量解析：如果用户要求高质量解析，优先检查已保存的 MinerU token；没有 token 时先提示用户配置，或使用轻量云端/本地 Docker MinerU。
+4. 启动论文阅读工作台：释放或刷新 `<workspace>/web`，安装依赖缺失时提示 `cd <workspace>/web && npm install`，再启动 Web 服务并给出访问 URL。
+5. 基于知识库挖掘新的创新点：查询已有论文知识库，生成按合理性分数从高到低排序的创新结果，并追加保存，不覆盖旧结果。
+
+Suggested user prompts:
+
+- `使用 paper-research-workflow 阅读 /path/to/paper.pdf`
+- `用 MinerU 高质量解析这篇论文`
+- `启动论文阅读工作台`
+- `基于知识库挖掘新的创新点，并按合理性排序`
+- `这篇论文的通俗解释不够清楚，请重新讲得更详细，保留旧版本`
 
 ## Language Rule
 

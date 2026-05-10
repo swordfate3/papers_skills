@@ -20,6 +20,20 @@ skills/paper-research-workflow/references/child-skills/
 npx skills add swordfate3/papers_skills --skill paper-research-workflow
 ```
 
+## 安装后怎么调用
+
+安装完成后，不需要先记脚本命令，可以直接对支持 Skills 的 Agent 说：
+
+```text
+使用 paper-research-workflow 读取这篇论文：/path/to/paper.pdf
+用 MinerU 高质量解析这篇论文
+启动论文阅读工作台
+基于知识库挖掘新的创新点，并按合理性分数排序
+这篇论文的通俗解释不够清楚，请重新讲得更详细，保留旧版本
+```
+
+第一次使用时，技能会先询问长期论文工作区放在哪里；之后论文 PDF、解析结果、阅读报告、复现计划、Web 数据和知识库都会默认保存到这个目录。
+
 ## 包含能力
 
 `paper-research-workflow` 内置以下论文研究流程：
@@ -178,7 +192,13 @@ python scripts/paper_workflow.py status
 
 ```json
 {
-  "papers": {}
+  "ok": true,
+  "workspace": "/path/to/paper-library",
+  "papers": {},
+  "next_actions": [
+    "读取论文：python scripts/paper_workflow.py ingest <PDF路径> --workspace /path/to/paper-library",
+    "启动可视化工作台：python scripts/paper_workflow.py web --web-command start --workspace /path/to/paper-library"
+  ]
 }
 ```
 
